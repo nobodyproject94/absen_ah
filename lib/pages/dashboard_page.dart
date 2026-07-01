@@ -13,6 +13,7 @@ import 'attendance_detail_map_page.dart';
 import 'attendance_history_page.dart';
 import 'login_page.dart';
 import 'profile_page.dart';
+import 'google_maps_screen.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -528,6 +529,19 @@ class _DashboardPageState extends State<DashboardPage> {
           'Refresh',
           'Sinkron API',
           _loadDashboard,
+        ),
+        _menuCard(
+          Icons.explore_rounded,
+          'Cari Lokasi',
+          'Posisi saat ini',
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const GoogleMapsScreenDay36(),
+              ),
+            );
+          },
         ),
       ],
     );

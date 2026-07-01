@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
 import '../models/user_model.dart';
 import '../models/training_model.dart';
 import '../models/training_response.dart';
@@ -273,7 +273,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             }
                           },
                         ),
-                        const SizedBox(height: 40),
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.3),
                       ]),
                     ),
                   ),
