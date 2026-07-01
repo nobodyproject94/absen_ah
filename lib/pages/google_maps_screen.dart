@@ -139,10 +139,7 @@ class _GoogleMapsScreenDay36State extends State<GoogleMapsScreenDay36> {
 
     try {
       if (await canLaunchUrl(googleMapsUrl)) {
-        await launchUrl(
-          googleMapsUrl,
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
       } else {
         throw 'Tidak dapat membuka Google Maps URL';
       }
@@ -158,7 +155,7 @@ class _GoogleMapsScreenDay36State extends State<GoogleMapsScreenDay36> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Google Maps Day 36')),
+      appBar: AppBar(title: const Text('Google Maps')),
       body: Stack(
         children: [
           GoogleMap(
