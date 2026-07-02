@@ -327,7 +327,6 @@ class _DashboardPageState extends State<DashboardPage> {
           child: PrimaryButton(
             label: 'Ajukan Izin / Sakit',
             icon: Icons.edit_document,
-            backgroundColor: AppColors.primary,
             onPressed: () {
               Navigator.pushNamed(context, '/izin');
             },
@@ -389,20 +388,20 @@ class _DashboardPageState extends State<DashboardPage> {
       childAspectRatio: 1.25,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      children: [
-        _menuCard(
-          Icons.map_rounded,
-          'Peta Lokasi',
-          'Detail koordinat',
-          _openMap,
-        ),
-        _menuCard(Icons.explore_rounded, 'Cari Lokasi', 'Posisi saat ini', () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const GoogleMapsScreenDay36()),
-          );
-        }),
-      ],
+      // children: [
+      //   _menuCard(
+      //     Icons.map_rounded,
+      //     'Peta Lokasi',
+      //     'Detail koordinat',
+      //     _openMap,
+      //   ),
+      //   _menuCard(Icons.explore_rounded, 'Cari Lokasi', 'Posisi saat ini', () {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(builder: (_) => const GoogleMapsScreenDay36()),
+      //     );
+      //   }),
+      // ],
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:absen_ah/pages/login_page.dart';
 import 'package:absen_ah/pages/main_page.dart';
 import 'package:absen_ah/pages/register_page.dart';
 import 'package:absen_ah/pages/splash_page.dart';
+import 'package:absen_ah/pages/izin_form_page.dart';
 import 'package:absen_ah/services/token_services.dart';
 import 'package:absen_ah/utils/theme_controller.dart';
 import 'package:absen_ah/providers/auth_provider.dart';
@@ -89,6 +90,7 @@ class _AbsensiAppState extends State<AbsensiApp> {
             '/login': (context) => const LoginPage(),
             '/register': (context) => const RegisterPage(),
             '/main': (context) => const MainPage(),
+            '/izin': (context) => const IzinFormPage(),
           },
         );
       },

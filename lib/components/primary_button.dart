@@ -20,17 +20,41 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDefault = backgroundColor == null;
     final baseColor = backgroundColor ?? AppColors.primary;
     
-    final bgColor = isDark ? baseColor.withValues(alpha: 0.15) : baseColor;
-    final fgColor = isDark ? Color.lerp(baseColor, Colors.white, 0.2)! : Colors.white;
+    final fgColor = (isDark && !isDefault) ? Color.lerp(baseColor, Colors.white, 0.2)! : Colors.white;
     final sColor = isDark ? Colors.transparent : baseColor.withValues(alpha: 0.4);
+
+    final gradient = isDefault
+        ? const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [AppColors.primary, AppColors.secondary],
+          )
+        : LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              baseColor,
+              Color.lerp(baseColor, Colors.white, 0.25)!
+            ],
+          );
+
+    final bgColor = Colors.transparent; // Since all buttons now have gradients, background should be transparent
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
       height: 54,
       width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: gradient,
+        boxShadow: (!isDark && !loading)
+            ? [BoxShadow(color: sColor, blurRadius: 6, offset: const Offset(0, 3))]
+            : null,
+      ),
       child: ElevatedButton.icon(
         onPressed: loading ? null : onPressed,
         icon: loading
@@ -46,8 +70,8 @@ class PrimaryButton extends StatelessWidget {
           foregroundColor: fgColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          elevation: loading || isDark ? 0 : 4,
-          shadowColor: sColor,
+          elevation: 0, // Elevation is handled by AnimatedContainer's boxShadow
+          shadowColor: Colors.transparent,
         ),
       ),
     );

@@ -492,8 +492,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 16),
                 _buildListTile(
                   isDark: isDark,
-                  icon: Icons.logout,
-                  iconBgColor: Colors.red.withValues(alpha: 0.2),
+                  icon: Icons.logout, 
+                  iconBgColor: Colors.red.withValues(alpha: 0.8),
                   title: 'Keluar',
                   titleColor: Colors.red,
                   onTap: () => _confirmSignOut(context),

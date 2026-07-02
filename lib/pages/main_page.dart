@@ -42,7 +42,15 @@ class _MainPageState extends State<MainPage> {
       body: BottomBar(
         controller: _bottomBarController,
         theme: BottomBarThemeData(
-          barDecoration: BoxDecoration(color: Theme.of(context).cardColor),
+          barDecoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : AppColors.primary.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+          ),
         ),
         layout: BottomBarLayout(
           borderRadius: BorderRadius.circular(32),
