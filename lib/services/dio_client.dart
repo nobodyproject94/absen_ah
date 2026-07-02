@@ -1,42 +1,72 @@
 import 'package:dio/dio.dart';
 import 'package:absen_ah/services/token_services.dart';
+import 'package:absen_ah/main.dart'; // import navigatorKey
 
-Dio createDioClient() {
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: 'https://appabsensi.mobileprojp.com',
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-      headers: {'Accept': 'application/json'},
-    ),
-  );
+class DioClient {
+  DioClient._();
+  static Dio? _instance;
 
-  // 1️⃣ Auth interceptor PERTAMA: inject Bearer Token sebelum request dikirim.
-  //    Harus di posisi pertama agar token sudah ada saat LogInterceptor mencatat.
-  dio.interceptors.add(
-    InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await TokenStorage.getToken();
-        if (token != null && token.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        handler.next(options);
-      },
-    ),
-  );
+  static Dio getInstance() {
+    _instance ??= _createDio();
+    return _instance!;
+  }
 
-  // 2️⃣ LogInterceptor KEDUA: mencatat request + response SETELAH token di-inject.
-  //    requestHeader: true  → tampilkan Authorization header di log
-  //    requestBody:  true   → tampilkan body JSON yang dikirim
-  //    responseBody: true   → tampilkan body JSON yang diterima dari server
-  dio.interceptors.add(
-    LogInterceptor(
-      requestHeader: true,
-      requestBody: true,
-      responseBody: true,
-      responseHeader: false,
-    ),
-  );
+  /// Reset the singleton (useful after logout to clear interceptor state)
+  static void reset() {
+    _instance?.close();
+    _instance = null;
+  }
 
-  return dio;
+  static Dio _createDio() {
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: 'https://appabsensi.mobileprojp.com',
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        headers: {'Accept': 'application/json'},
+      ),
+    );
+
+    // 1️⃣ Auth interceptor PERTAMA: inject Bearer Token sebelum request dikirim.
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await TokenStorage.getToken();
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
+    );
+
+    // 2️⃣ LogInterceptor KEDUA
+    dio.interceptors.add(
+      LogInterceptor(
+        requestHeader: true,
+        requestBody: true,
+        responseBody: true,
+        responseHeader: false,
+      ),
+    );
+
+    // 3️⃣ Error interceptor untuk menangani 401 Unauthorized secara global.
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onError: (DioException error, handler) async {
+          if (error.response?.statusCode == 401) {
+            await TokenStorage.clearToken();
+            // Redirect ke halaman login menggunakan navigatorKey
+            navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
+          }
+          handler.next(error);
+        },
+      ),
+    );
+
+    return dio;
+  }
 }
+
+// Backward compatible helper
+Dio createDioClient() => DioClient.getInstance();

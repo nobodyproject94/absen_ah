@@ -3,8 +3,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-class GoogleMapsScreenDay36 extends StatefulWidget {
+import '../services/location_service.dart';class GoogleMapsScreenDay36 extends StatefulWidget {
   const GoogleMapsScreenDay36({super.key});
 
   @override
@@ -25,62 +24,23 @@ class _GoogleMapsScreenDay36State extends State<GoogleMapsScreenDay36> {
   }
 
   Future<void> _checkPermissionsAndGetLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (mounted) {
-        setState(() {
-          _currentAddress = "Layanan lokasi dinonaktifkan.";
-        });
-      }
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        if (mounted) {
-          setState(() {
-            _currentAddress = "Izin lokasi ditolak.";
-          });
-        }
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      if (mounted) {
-        setState(() {
-          _currentAddress = "Izin lokasi ditolak permanen.";
-        });
-      }
-      return;
-    }
-
-    await _getCurrentLocation();
-  }
-
-  Future<void> _getCurrentLocation() async {
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      if (mounted) {
-        setState(() {
-          _currentPosition = position;
-        });
-      }
-
+      Position position = await LocationService.getCurrentPosition();
+      if (!mounted) return;
+      setState(() {
+        _currentPosition = position;
+        _currentAddress = "Mencari Lokasi...";
+      });
       _updateMarkerAndCamera(position);
       await _getAddressFromLatLng(position);
     } catch (e) {
-      debugPrint("Error getting location: $e");
+      if (!mounted) return;
+      setState(() {
+        _currentAddress = e.toString().replaceAll('Exception: ', '');
+      });
     }
   }
+
 
   void _updateMarkerAndCamera(Position position) {
     LatLng currentLatLng = LatLng(position.latitude, position.longitude);

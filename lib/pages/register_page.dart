@@ -1,13 +1,11 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../models/training_model.dart';
-import '../services/api_service.dart';
-import '../services/dio_client.dart';
-import '../services/token_services.dart';
-import '../utils/absensi_ui.dart';
-import 'login_page.dart';
-import 'main_page.dart';
+import '../providers/auth_provider.dart';
+import '../components/absensi_card.dart';
+import '../components/custom_text_field.dart';
+import '../components/primary_button.dart';
+import '../utils/app_colors.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -21,137 +19,77 @@ class _RegisterPageState extends State<RegisterPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _batchIdController = TextEditingController(text: '1');
-
-  String _jenisKelamin = 'L';
-  bool _isLoading = false;
-  bool _loadingTrainings = true;
-  bool _obscurePassword = true;
-  List<TrainingModel> _trainings = [];
-  int? _selectedTrainingId;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchTrainings();
-  }
+  
+  String _jenisKelamin = 'L'; // L or P
+  final int _batchId = 1; // Default
+  final int _trainingId = 16; // Default
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _batchIdController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchTrainings() async {
-    try {
-      final response = await ApiService(createDioClient()).getTrainings();
-      final list = response.data ?? [];
-      if (!mounted) return;
-      setState(() {
-        _trainings = list;
-        _selectedTrainingId = list.isNotEmpty ? list.first.id : null;
-        _loadingTrainings = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loadingTrainings = false);
-    }
+  String? _requiredField(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) return '$fieldName tidak boleh kosong';
+    return null;
+  }
+
+  String? _requiredEmail(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Email tidak boleh kosong';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) return 'Format email tidak valid';
+    return null;
   }
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
 
-    try {
-      final apiService = ApiService(createDioClient());
-      final body = {
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'password': _passwordController.text,
-        'jenis_kelamin': _jenisKelamin,
-        'batch_id': int.tryParse(_batchIdController.text.trim()) ?? 1,
-        'training_id': _selectedTrainingId ?? 1,
-        'profile_photo':
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-      };
+    final authProvider = context.read<AuthProvider>();
+    final body = {
+      'name': _nameController.text.trim(),
+      'email': _emailController.text.trim(),
+      'password': _passwordController.text,
+      'jenis_kelamin': _jenisKelamin,
+      'profile_photo': '',
+      'batch_id': _batchId,
+      'training_id': _trainingId,
+    };
 
-      final dynamic response = await apiService.register(body);
-      final token = response?.data?.token?.toString();
+    final success = await authProvider.register(body);
 
-      if (!mounted) return;
-      if (token != null && token.isNotEmpty) {
-        await TokenStorage.saveToken(token);
-        if (!mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const MainPage()),
-          (_) => false,
-        );
-      } else {
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushReplacementNamed(context, '/main');
+    } else {
+      if (authProvider.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registrasi berhasil. Silakan login.')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginPage()),
+          SnackBar(
+            content: Text(authProvider.error!),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
-    } on DioException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_dioErrorMessage(e))));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal mendaftar: $e')));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  String _dioErrorMessage(DioException e) {
-    if (e.response == null)
-      return 'Gagal mendaftar: Terjadi kesalahan jaringan.';
-    final status = e.response!.statusCode;
-    if (status == 422)
-      return 'Gagal mendaftar: ${extractApiMessage(e.response?.data, 'Data registrasi tidak valid.')}';
-    if (status == 500)
-      return 'Gagal mendaftar: server sedang bermasalah (500).';
-    return 'Gagal mendaftar: ${extractApiMessage(e.response?.data, e.message ?? 'Terjadi kesalahan.')}';
-  }
-
-  String? _required(String? value, String label) {
-    if ((value ?? '').trim().isEmpty) return '$label tidak boleh kosong';
-    return null;
-  }
-
-  String? _emailValidator(String? value) {
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Email tidak boleh kosong';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text))
-      return 'Format email tidak valid';
-    return null;
-  }
-
-  String? _passwordValidator(String? value) {
-    final text = value ?? '';
-    if (text.isEmpty) return 'Password tidak boleh kosong';
-    if (text.length < 6) return 'Password minimal 6 karakter';
-    return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final isLoading = authProvider.isLoading;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
+      appBar: AppBar(
+        title: const Text('Registrasi', style: TextStyle(fontWeight: FontWeight.w700)),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -160,132 +98,94 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Lengkapi data peserta untuk aktivasi akun absensi PPKD.',
+              Text(
+                'Daftar untuk mulai absensi hari ini.',
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 32),
               AbsensiCard(
                 child: Form(
                   key: _formKey,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextFormField(
+                      CustomTextField(
+                        label: 'Nama Lengkap',
+                        icon: Icons.person_rounded,
                         controller: _nameController,
-                        decoration: absensiInputDecoration(
-                          'Nama',
-                          Icons.person_rounded,
-                        ),
-                        validator: (v) => _required(v, 'Nama'),
+                        validator: (val) => _requiredField(val, 'Nama'),
                       ),
-                      const SizedBox(height: 14),
-                      TextFormField(
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        label: 'Email',
+                        icon: Icons.email_rounded,
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        decoration: absensiInputDecoration(
-                          'Email',
-                          Icons.email_rounded,
-                        ),
-                        validator: _emailValidator,
+                        validator: _requiredEmail,
                       ),
-                      const SizedBox(height: 14),
-                      TextFormField(
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        label: 'Password',
+                        icon: Icons.lock_rounded,
                         controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        decoration:
-                            absensiInputDecoration(
-                              'Password',
-                              Icons.lock_rounded,
-                            ).copyWith(
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_rounded
-                                      : Icons.visibility_off_rounded,
-                                ),
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                              ),
-                            ),
-                        validator: _passwordValidator,
+                        isPassword: true,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _register(),
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return 'Password tidak boleh kosong';
+                          if (val.length < 6) return 'Password minimal 6 karakter';
+                          return null;
+                        },
                       ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        initialValue: _jenisKelamin,
-                        isExpanded: true,
-                        decoration: absensiInputDecoration(
-                          'Jenis Kelamin',
-                          Icons.transgender_rounded,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'L',
-                            child: Text('Laki-laki'),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Jenis Kelamin',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Laki-laki', style: TextStyle(fontSize: 14)),
+                              value: 'L',
+                              groupValue: _jenisKelamin,
+                              contentPadding: EdgeInsets.zero,
+                              onChanged: (val) => setState(() => _jenisKelamin = val!),
+                            ),
                           ),
-                          DropdownMenuItem(
-                            value: 'P',
-                            child: Text('Perempuan'),
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Perempuan', style: TextStyle(fontSize: 14)),
+                              value: 'P',
+                              groupValue: _jenisKelamin,
+                              contentPadding: EdgeInsets.zero,
+                              onChanged: (val) => setState(() => _jenisKelamin = val!),
+                            ),
                           ),
                         ],
-                        onChanged: (value) =>
-                            setState(() => _jenisKelamin = value ?? 'L'),
                       ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _batchIdController,
-                        keyboardType: TextInputType.number,
-                        decoration: absensiInputDecoration(
-                          'Batch ID',
-                          Icons.badge_rounded,
-                        ),
-                        validator: (v) => _required(v, 'Batch ID'),
-                      ),
-                      const SizedBox(height: 14),
-                      _loadingTrainings
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: CircularProgressIndicator(),
-                            )
-                          : DropdownButtonFormField<int>(
-                              initialValue: _selectedTrainingId,
-                              isExpanded: true,
-                              decoration: absensiInputDecoration(
-                                'Training',
-                                Icons.school_rounded,
-                              ),
-                              items: _trainings
-                                  .map(
-                                    (t) => DropdownMenuItem<int>(
-                                      value: t.id,
-                                      child: Text(
-                                        t.title ?? 'Training ${t.id}',
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              validator: (v) =>
-                                  v == null ? 'Training harus dipilih' : null,
-                              onChanged: (value) =>
-                                  setState(() => _selectedTrainingId = value),
-                            ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 28),
                       PrimaryButton(
-                        label: 'Register',
-                        icon: Icons.person_add_alt_1_rounded,
-                        loading: _isLoading,
+                        label: 'Daftar',
+                        icon: Icons.person_add_rounded,
+                        loading: isLoading,
                         onPressed: _register,
                       ),
-                      const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginPage(),
-                                ),
-                              ),
-                        child: const Text('Sudah punya akun? Login di sini'),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: TextButton(
+                          onPressed: isLoading
+                              ? null
+                              : () => Navigator.pushReplacementNamed(context, '/login'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                          ),
+                          child: const Text(
+                            'Sudah punya akun? Login di sini',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
                       ),
                     ],
                   ),

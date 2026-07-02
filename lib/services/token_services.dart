@@ -3,11 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class TokenStorage {
   static const String _keyToken = 'day35_auth_token';
 
-  static const FlutterSecureStorage _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-  );
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
   static Future<void> saveToken(String token) async {
     await _storage.write(key: _keyToken, value: token);
   }

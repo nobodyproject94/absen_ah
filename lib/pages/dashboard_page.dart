@@ -1,18 +1,14 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 
-import '../models/user_model.dart';
-import '../services/api_service.dart';
-import '../services/dio_client.dart';
-import '../services/token_services.dart';
-import '../models/attendance_record.dart';
-import '../utils/absensi_ui.dart';
+import '../providers/auth_provider.dart';
+import '../providers/attendance_provider.dart';
+import '../components/absensi_card.dart';
+import '../components/primary_button.dart';
+import '../utils/app_colors.dart';
+import '../utils/helpers.dart';
 import '../utils/theme_controller.dart';
 import 'attendance_detail_map_page.dart';
-import 'attendance_history_page.dart';
-import 'login_page.dart';
-import 'profile_page.dart';
 import 'google_maps_screen.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -23,194 +19,56 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  UserModel? _user;
-  List<AttendanceRecord> _records = [];
-  bool _loading = true;
-  bool _postingCheckIn = false;
-  bool _postingCheckOut = false;
-  String? _error;
-  Position? _lastPosition;
-
   @override
   void initState() {
     super.initState();
-    _loadDashboard();
-  }
-
-  Dio get _dio => createDioClient();
-
-  Future<void> _loadDashboard() async {
-    setState(() {
-      _loading = true;
-      _error = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final provider = context.read<AttendanceProvider>();
+      provider.fetchHistory();
+      provider.fetchTodayAbsen();
+      provider.fetchStats();
     });
+  }
 
+  Future<void> _submitAttendance(BuildContext context, bool isCheckIn) async {
+    final provider = context.read<AttendanceProvider>();
     try {
-      final dio = _dio;
-      final apiService = ApiService(dio);
-      final profileFuture = apiService.getProfile();
-      final historyFuture = dio.get('/api/absen/history');
-
-      final profileResponse = await profileFuture;
-      final historyResponse = await historyFuture;
-
-      final records = _parseAttendanceList(historyResponse.data);
-      if (!mounted) return;
-      setState(() {
-        _user = profileResponse.data ?? profileResponse.user;
-        _records = records;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
-    }
-  }
-
-  List<AttendanceRecord> _parseAttendanceList(dynamic payload) {
-    dynamic raw = payload;
-    if (payload is Map) {
-      raw =
-          payload['data'] ??
-          payload['absen'] ??
-          payload['history'] ??
-          payload['data_absen'];
-    }
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map(
-            (item) =>
-                AttendanceRecord.fromJson(Map<String, dynamic>.from(item)),
-          )
-          .toList();
-    }
-    return [];
-  }
-
-  AttendanceRecord? get _todayRecord {
-    final now = DateTime.now();
-    final todayKey = '${now.year}-${dd(now.month)}-${dd(now.day)}';
-    for (final r in _records) {
-      final date = r.date ?? '';
-      if (date.contains(todayKey) || date.contains('${now.day}')) return r;
-    }
-    return _records.isNotEmpty ? _records.first : null;
-  }
-
-  Future<Position> _getCurrentPosition() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception(
-        'GPS belum aktif. Aktifkan layanan lokasi terlebih dahulu.',
-      );
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied) {
-      throw Exception(
-        'Izin lokasi ditolak. Absensi membutuhkan latitude dan longitude.',
-      );
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      throw Exception(
-        'Izin lokasi ditolak permanen. Buka pengaturan aplikasi untuk mengaktifkannya.',
-      );
-    }
-
-    return Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-  }
-
-  Future<void> _submitAttendance({required bool checkIn}) async {
-    setState(() {
-      if (checkIn) {
-        _postingCheckIn = true;
-      } else {
-        _postingCheckOut = true;
-      }
-    });
-
-    try {
-      final position = await _getCurrentPosition();
-      _lastPosition = position;
-
-      final body = {
-        'latitude': position.latitude,
-        'longitude': position.longitude,
-        'lat': position.latitude,
-        'lng': position.longitude,
-      };
-
-      final endpoint = checkIn ? '/absen-check-in' : '/absen-check-out';
-      final response = await _dio.post(endpoint, data: body);
-
-      if (!mounted) return;
+      final message = await provider.submitAttendance(isCheckIn: isCheckIn);
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            extractApiMessage(
-              response.data,
-              checkIn ? 'Absen masuk berhasil.' : 'Absen pulang berhasil.',
-            ),
+            message ??
+                (isCheckIn
+                    ? 'Absen masuk berhasil.'
+                    : 'Absen pulang berhasil.'),
           ),
-        ),
-      );
-      await _loadDashboard();
-    } on DioException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            extractApiMessage(
-              e.response?.data,
-              'Absensi gagal. Periksa koneksi dan status absensi Anda.',
-            ),
-          ),
+          backgroundColor: AppColors.success,
         ),
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppColors.danger,
+        ),
       );
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _postingCheckIn = false;
-        _postingCheckOut = false;
-      });
     }
-  }
-
-  Future<void> _logout() async {
-    await TokenStorage.clearToken();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (_) => false,
-    );
   }
 
   void _openMap() {
-    final today = _todayRecord;
-    final lat = today?.displayLatitude ?? _lastPosition?.latitude;
-    final lng = today?.displayLongitude ?? _lastPosition?.longitude;
+    final provider = context.read<AttendanceProvider>();
+    final today = provider.todayRecord;
+    final lat = today?.displayLatitude ?? provider.lastPosition?.latitude;
+    final lng = today?.displayLongitude ?? provider.lastPosition?.longitude;
+
     if (lat == null || lng == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Lokasi belum tersedia. Lakukan absensi atau buka riwayat yang memiliki koordinat.',
+            'Lokasi belum tersedia. Lakukan absensi terlebih dahulu.',
           ),
         ),
       );
@@ -219,7 +77,11 @@ class _DashboardPageState extends State<DashboardPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AttendanceDetailMapPage(latitude: lat, longitude: lng),
+        builder: (_) => AttendanceDetailMapPage(
+          latitude: lat,
+          longitude: lng,
+          title: "Lokasi Absen",
+        ),
       ),
     );
   }
@@ -234,88 +96,42 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final attendanceProvider = context.watch<AttendanceProvider>();
+    final user = authProvider.user;
+
     return Scaffold(
-      body: _loading
+      body: attendanceProvider.isLoading && attendanceProvider.records.isEmpty
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? _buildError()
           : RefreshIndicator(
-              onRefresh: _loadDashboard,
+              onRefresh: () async {
+                await Future.wait([
+                  attendanceProvider.fetchHistory(),
+                  attendanceProvider.fetchTodayAbsen(),
+                  attendanceProvider.fetchStats(),
+                  authProvider.fetchProfile(),
+                ]);
+              },
               child: CustomScrollView(
                 slivers: [
-                  SliverAppBar(
-                    expandedHeight: 230,
-                    pinned: true,
-                    actions: [
-                      AnimatedBuilder(
-                        animation: ThemeController.instance,
-                        builder: (context, _) => Switch(
-                          value: ThemeController.instance.isDarkMode,
-                          onChanged: ThemeController.instance.toggleTheme,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _logout,
-                        icon: const Icon(Icons.logout_rounded),
-                      ),
-                    ],
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        padding: const EdgeInsets.fromLTRB(20, 80, 20, 24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: Theme.of(context).brightness == Brightness.dark
-                                ? [Colors.grey.shade900, Colors.grey.shade800]
-                                : [AbsensiColors.primary, AbsensiColors.secondary],
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${_greeting()},',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _user?.name ?? 'Peserta PPKD',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              readableDate(DateTime.now()),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                  _buildSliverAppBar(user?.name),
+                  if (attendanceProvider.error != null &&
+                      attendanceProvider.records.isEmpty)
+                    SliverToBoxAdapter(
+                      child: _buildError(attendanceProvider.error!),
                     ),
-                  ),
                   SliverPadding(
                     padding: const EdgeInsets.all(18),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        _buildTodayStatus(),
+                        _buildTodayStatus(attendanceProvider),
                         const SizedBox(height: 18),
-                        _buildActionButtons(),
+                        _buildActionButtons(attendanceProvider),
                         const SizedBox(height: 18),
-                        _buildStats(),
+                        _buildStats(attendanceProvider),
                         const SizedBox(height: 18),
                         _buildMenuGrid(),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 120),
                       ]),
                     ),
                   ),
@@ -325,25 +141,57 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildError() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+  Widget _buildSliverAppBar(String? userName) {
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 8, 20, 32),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: Theme.of(context).brightness == Brightness.dark
+                ? [Colors.grey.shade900, Colors.grey.shade800]
+                : [AppColors.primary, AppColors.secondary],
+          ),
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.wifi_off_rounded,
-              size: 54,
-              color: AbsensiColors.danger,
+            Align(
+              alignment: Alignment.centerRight,
+              child: AnimatedBuilder(
+                animation: ThemeController.instance,
+                builder: (context, _) {
+                  final isDark = ThemeController.instance.isDarkMode;
+                  return IconButton(
+                    icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: Colors.white),
+                    tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
+                    onPressed: () => ThemeController.instance.toggleTheme(!isDark),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 16),
-            Text(_error!, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            PrimaryButton(
-              label: 'Coba Lagi',
-              icon: Icons.refresh_rounded,
-              onPressed: _loadDashboard,
+            Text(
+              '${_greeting()},',
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              userName ?? 'Peserta PPKD',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              readableDate(DateTime.now()),
+              style: const TextStyle(color: Colors.white, fontSize: 15),
             ),
           ],
         ),
@@ -351,10 +199,31 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildTodayStatus() {
-    final today = _todayRecord;
+  Widget _buildError(String error) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 54, color: AppColors.danger),
+          const SizedBox(height: 16),
+          Text(error, textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          PrimaryButton(
+            label: 'Coba Lagi',
+            icon: Icons.refresh_rounded,
+            onPressed: () => context.read<AttendanceProvider>().fetchHistory(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTodayStatus(AttendanceProvider provider) {
+    final today = provider.todayRecord;
     final masuk = today?.checkInTime ?? '-';
     final pulang = today?.checkOutTime ?? '-';
+
     return AbsensiCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +240,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Icons.login_rounded,
                   'Masuk',
                   masuk,
-                  AbsensiColors.success,
+                  AppColors.success,
                 ),
               ),
               const SizedBox(width: 12),
@@ -380,7 +249,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Icons.logout_rounded,
                   'Pulang',
                   pulang,
-                  AbsensiColors.warning,
+                  AppColors.warning,
                 ),
               ),
             ],
@@ -394,7 +263,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -415,59 +284,70 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Row(
+  Widget _buildActionButtons(AttendanceProvider provider) {
+    return Column(
       children: [
-        Expanded(
-          child: PrimaryButton(
-            label: 'Absen Masuk',
-            icon: Icons.my_location_rounded,
-            loading: _postingCheckIn,
-            backgroundColor: AbsensiColors.success,
-            onPressed: () => _submitAttendance(checkIn: true),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: PrimaryButton(
+                label: 'Masuk',
+                icon: Icons.my_location_rounded,
+                loading: provider.isCheckingIn,
+                backgroundColor: AppColors.success,
+                onPressed: () => _submitAttendance(context, true),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: PrimaryButton(
+                label: 'Pulang',
+                icon: Icons.pin_drop_rounded,
+                loading: provider.isCheckingOut,
+                backgroundColor: AppColors.warning,
+                onPressed: () => _submitAttendance(context, false),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
           child: PrimaryButton(
-            label: 'Absen Pulang',
-            icon: Icons.pin_drop_rounded,
-            loading: _postingCheckOut,
-            backgroundColor: AbsensiColors.warning,
-            onPressed: () => _submitAttendance(checkIn: false),
+            label: 'Ajukan Izin / Sakit',
+            icon: Icons.edit_document,
+            backgroundColor: AppColors.primary,
+            onPressed: () {
+              Navigator.pushNamed(context, '/izin');
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStats() {
-    final total = _records.length;
-    final complete = _records
-        .where((r) => r.hasCheckedIn && r.hasCheckedOut)
-        .length;
-    final incomplete = total - complete;
+  Widget _buildStats(AttendanceProvider provider) {
     return AbsensiCard(
       child: Row(
         children: [
           Expanded(
             child: _statItem(
               'Total',
-              total.toString(),
+              provider.totalAbsen.toString(),
               Icons.calendar_month_rounded,
             ),
           ),
           Expanded(
             child: _statItem(
-              'Lengkap',
-              complete.toString(),
+              'Masuk',
+              provider.totalMasuk.toString(),
               Icons.verified_rounded,
             ),
           ),
           Expanded(
             child: _statItem(
-              'Belum',
-              incomplete.toString(),
+              'Izin',
+              provider.totalIzin.toString(),
               Icons.pending_actions_rounded,
             ),
           ),
@@ -479,13 +359,13 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _statItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: AbsensiColors.primary),
+        Icon(icon, color: AppColors.primary),
         const SizedBox(height: 8),
         Text(
           value,
           style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22),
         ),
-        Text(label, style: const TextStyle(fontSize: 12)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -499,50 +379,18 @@ class _DashboardPageState extends State<DashboardPage> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        _menuCard(
-          Icons.history_rounded,
-          'Riwayat',
-          'Lihat data absensi',
-          () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AttendanceHistoryPage()),
-            );
-            _loadDashboard();
-          },
-        ),
-        _menuCard(
-          Icons.map_rounded,
-          'Peta Lokasi',
-          'Detail koordinat',
-          _openMap,
-        ),
-        _menuCard(Icons.person_rounded, 'Profil', 'Data pengguna', () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ProfilePage()),
-          );
-          _loadDashboard();
-        }),
-        _menuCard(
-          Icons.refresh_rounded,
-          'Refresh',
-          'Sinkron API',
-          _loadDashboard,
-        ),
-        _menuCard(
-          Icons.explore_rounded,
-          'Cari Lokasi',
-          'Posisi saat ini',
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const GoogleMapsScreenDay36(),
-              ),
-            );
-          },
-        ),
+        // _menuCard(
+        //   Icons.map_rounded,
+        //   'Peta Lokasi',
+        //   'Detail koordinat',
+        //   _openMap,
+        // ),
+        // _menuCard(Icons.explore_rounded, 'Cari Lokasi', 'Posisi saat ini', () {
+        //   Navigator.push(
+        //     context,
+        //     MaterialPageRoute(builder: (_) => const GoogleMapsScreenDay36()),
+        //   );
+        // }),
       ],
     );
   }
@@ -558,16 +406,16 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AbsensiColors.primary, size: 32),
+          Icon(icon, color: AppColors.primary, size: 32),
           const Spacer(),
           Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ],
       ),

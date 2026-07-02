@@ -3,12 +3,14 @@ class AttendanceRecord {
   final String? date;
   final String? checkInTime;
   final String? checkOutTime;
-  final double? latitude;
-  final double? longitude;
   final double? checkInLatitude;
   final double? checkInLongitude;
   final double? checkOutLatitude;
   final double? checkOutLongitude;
+  final String? checkInAddress;
+  final String? checkOutAddress;
+  final String? status;
+  final String? alasanIzin;
   final Map<String, dynamic> raw;
 
   const AttendanceRecord({
@@ -16,12 +18,14 @@ class AttendanceRecord {
     this.date,
     this.checkInTime,
     this.checkOutTime,
-    this.latitude,
-    this.longitude,
     this.checkInLatitude,
     this.checkInLongitude,
     this.checkOutLatitude,
     this.checkOutLongitude,
+    this.checkInAddress,
+    this.checkOutAddress,
+    this.status,
+    this.alasanIzin,
     required this.raw,
   });
 
@@ -36,22 +40,32 @@ class AttendanceRecord {
 
     return AttendanceRecord(
       id: json['id'] is int ? json['id'] : int.tryParse('${json['id'] ?? ''}'),
-      date: asString(json['tanggal'] ?? json['date'] ?? json['created_at']),
-      checkInTime: asString(json['jam_masuk'] ?? json['check_in'] ?? json['check_in_time'] ?? json['time_in']),
-      checkOutTime: asString(json['jam_keluar'] ?? json['check_out'] ?? json['check_out_time'] ?? json['time_out']),
-      latitude: asDouble(json['latitude'] ?? json['lat']),
-      longitude: asDouble(json['longitude'] ?? json['lng'] ?? json['long']),
-      checkInLatitude: asDouble(json['check_in_latitude'] ?? json['latitude_masuk'] ?? json['lat_masuk']),
-      checkInLongitude: asDouble(json['check_in_longitude'] ?? json['longitude_masuk'] ?? json['lng_masuk'] ?? json['long_masuk']),
-      checkOutLatitude: asDouble(json['check_out_latitude'] ?? json['latitude_keluar'] ?? json['lat_keluar']),
-      checkOutLongitude: asDouble(json['check_out_longitude'] ?? json['longitude_keluar'] ?? json['lng_keluar'] ?? json['long_keluar']),
+      date: asString(json['attendance_date'] ?? json['tanggal'] ?? json['date'] ?? json['created_at']),
+      checkInTime: asString(json['check_in_time'] ?? json['jam_masuk'] ?? json['check_in'] ?? json['time_in']),
+      checkOutTime: asString(json['check_out_time'] ?? json['jam_keluar'] ?? json['check_out'] ?? json['time_out']),
+      checkInLatitude: asDouble(json['check_in_lat'] ?? json['check_in_latitude'] ?? json['latitude'] ?? json['lat']),
+      checkInLongitude: asDouble(json['check_in_lng'] ?? json['check_in_longitude'] ?? json['longitude'] ?? json['lng']),
+      checkOutLatitude: asDouble(json['check_out_lat'] ?? json['check_out_latitude']),
+      checkOutLongitude: asDouble(json['check_out_lng'] ?? json['check_out_longitude']),
+      checkInAddress: asString(json['check_in_address']),
+      checkOutAddress: asString(json['check_out_address']),
+      status: asString(json['status']),
+      alasanIzin: asString(json['alasan_izin']),
       raw: json,
     );
   }
 
   bool get hasCheckedIn => checkInTime != null && checkInTime!.isNotEmpty;
   bool get hasCheckedOut => checkOutTime != null && checkOutTime!.isNotEmpty;
+  bool get isIzin => status == 'izin';
+  bool get isMasuk => status == 'masuk';
 
-  double? get displayLatitude => checkInLatitude ?? latitude ?? checkOutLatitude;
-  double? get displayLongitude => checkInLongitude ?? longitude ?? checkOutLongitude;
+  double? get displayLatitude => checkInLatitude ?? checkOutLatitude;
+  double? get displayLongitude => checkInLongitude ?? checkOutLongitude;
+
+  String get displayAddress {
+    if (checkInAddress != null && checkInAddress!.isNotEmpty) return checkInAddress!;
+    if (checkOutAddress != null && checkOutAddress!.isNotEmpty) return checkOutAddress!;
+    return 'Lokasi tidak tersedia';
+  }
 }

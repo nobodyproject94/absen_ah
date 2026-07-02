@@ -1,14 +1,18 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
 
-import '../models/user_model.dart';
-import '../models/training_model.dart';
-import '../models/training_response.dart';
-import '../services/api_service.dart';
-import '../services/dio_client.dart';
-import '../services/token_services.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
+import '../providers/language_provider.dart';
+import '../providers/notification_settings_provider.dart';
+import '../utils/app_colors.dart';
+import '../utils/theme_controller.dart';
+import 'change_password_page.dart';
 import 'edit_profile_page.dart';
 import 'login_page.dart';
-import '../utils/absensi_ui.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,310 +22,488 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  UserModel? _user;
-  List<TrainingModel>? _trainings;
-  bool _isLoading = true;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
-    _fetchProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<AuthProvider>().fetchProfile();
+    });
   }
 
-  Future<void> _fetchProfile({bool showLoading = true}) async {
-    if (showLoading) {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-    }
-    try {
-      final dio = createDioClient();
-      final apiService = ApiService(dio);
-      // Token disisipkan otomatis oleh interceptor di dio_client.dart
+  Future<void> _pickImage(BuildContext context) async {
+    final authProvider = context.read<AuthProvider>();
 
-      final profileFuture = apiService.getProfile();
-      TrainingResponse? trainingsResponse;
-      try {
-        trainingsResponse = await apiService.getTrainings();
-      } catch (_) {
-        trainingsResponse = null;
+    // Bottom sheet for image source
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Pilih dari Galeri'),
+                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Ambil Foto (Kamera)'),
+                onTap: () => Navigator.of(context).pop(ImageSource.camera),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source != null) {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+
+      if (pickedFile != null) {
+        final bytes = await File(pickedFile.path).readAsBytes();
+        final base64Image = 'data:image/png;base64,${base64Encode(bytes)}';
+
+        final success = await authProvider.updateProfilePhoto(base64Image);
+        if (!context.mounted) return;
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Foto profil berhasil diubah.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                authProvider.error ?? 'Gagal mengubah foto profil.',
+              ),
+            ),
+          );
+        }
       }
-
-      final response = await profileFuture;
-
-      setState(() {
-        _user = response.data ?? response.user;
-        _trainings = trainingsResponse?.data;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
     }
   }
 
-  void _logout() async {
-    await TokenStorage.clearToken();
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+  void _confirmSignOut(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Sign Out'),
+          content: const Text('Apakah Anda yakin ingin keluar dari sesi ini?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Batal'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            TextButton(
+              child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // close dialog
+                await context.read<AuthProvider>().logout();
+                if (!context.mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  (Route<dynamic> route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
-  void _refreshProfile({bool showLoading = true}) {
-    _fetchProfile(showLoading: showLoading);
+  void _showAboutDialog(BuildContext context) {
+    showAboutDialog(
+      context: context,
+      applicationName: 'Absensi PPKD',
+      applicationVersion: '1.0.0',
+      applicationLegalese: '© 2026 PPKD Jakarta Pusat',
+    );
   }
 
-  String _getTrainingTitle(int? id) {
-    if (id == null) return "-";
-    if (_trainings == null) return id.toString();
-    try {
-      final t = _trainings!.firstWhere((t) => t.id == id);
-      return t.title ?? id.toString();
-    } catch (e) {
-      return id.toString();
-    }
+  String _getTrainingName(int? trainingId, AuthProvider provider) {
+    if (trainingId == null) return '-';
+    if (provider.trainings == null) return 'Memuat...';
+    final training = provider.trainings?.cast().firstWhere(
+      (t) => t.id == trainingId,
+      orElse: () => null,
+    );
+    return training?.title ?? 'Unknown Training';
+  }
+
+  String _photoUrl(String value) {
+    return value.startsWith('http')
+        ? value
+        : 'https://appabsensi.mobileprojp.com/storage/$value';
+  }
+
+  Widget _buildSectionTitle(String title, {Widget? trailing}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListTile({
+    required IconData icon,
+    required Color iconBgColor,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+    Color? titleColor,
+    required bool isDark,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: iconBgColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: isDark ? Colors.white : Colors.black87),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(fontWeight: FontWeight.w600, color: titleColor),
+      ),
+      subtitle: subtitle != null
+          ? Text(subtitle, style: const TextStyle(fontSize: 13))
+          : null,
+      trailing: trailing,
+      onTap: onTap,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text("Error: $_error"))
-          : _user == null
-          ? const Center(child: Text("Data profil tidak ditemukan"))
-          : RefreshIndicator(
-              onRefresh: () async => _refreshProfile(showLoading: false),
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    expandedHeight: 250,
-                    pinned: true,
-                    actions: [
-                      IconButton(
-                        icon: const Icon(Icons.logout, color: Colors.white),
-                        onPressed: _logout,
-                      ),
-                    ],
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        padding: const EdgeInsets.fromLTRB(20, 80, 20, 24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: Theme.of(context).brightness == Brightness.dark
-                                ? [Colors.grey.shade900, Colors.grey.shade800]
-                                : [AbsensiColors.primary, AbsensiColors.secondary],
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 3,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child:
-                                    _user!.profilePhoto != null &&
-                                        _user!.profilePhoto!.isNotEmpty
-                                    ? Image.network(
-                                        _user!.profilePhoto!.startsWith('http')
-                                            ? _user!.profilePhoto!
-                                            : 'https://appabsensi.mobileprojp.com/storage/${_user!.profilePhoto}',
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                const Icon(
-                                                  Icons.person,
-                                                  size: 50,
-                                                  color: Colors.grey,
-                                                ),
-                                      )
-                                    : Container(
-                                        color: Colors.white,
-                                        child: const Icon(
-                                          Icons.person,
-                                          size: 50,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _user!.name ?? "Peserta PPKD",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.all(20.0),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: Theme.of(context).dividerColor.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildProfileItem(
-                                  Icons.person,
-                                  "Nama",
-                                  _user!.name ?? "-",
-                                ),
-                                const Divider(height: 24),
-                                _buildProfileItem(
-                                  Icons.email,
-                                  "Email",
-                                  _user!.email ?? "-",
-                                ),
-                                const Divider(height: 24),
-                                _buildProfileItem(
-                                  Icons.transgender,
-                                  "Jenis Kelamin",
-                                  _user!.jenisKelamin == 'L'
-                                      ? 'Laki-laki'
-                                      : (_user!.jenisKelamin == 'P'
-                                            ? 'Perempuan'
-                                            : '-'),
-                                ),
-                                const Divider(height: 24),
-                                _buildProfileItem(
-                                  Icons.badge,
-                                  "Batch ID",
-                                  _user!.batchId?.toString() ?? "-",
-                                ),
-                                const Divider(height: 24),
-                                _buildProfileItem(
-                                  Icons.school,
-                                  "Training",
-                                  _getTrainingTitle(_user!.trainingId),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.edit, color: Colors.white),
-                          label: const Text(
-                            "Edit Profile",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2196F3),
-                            minimumSize: const Size(double.infinity, 54),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
-                          onPressed: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => EditProfilePage(user: _user!),
-                              ),
-                            );
-                            if (result != null && result is UserModel) {
-                              setState(() {
-                                _user = result;
-                              });
-                            } else if (result == true) {
-                              _refreshProfile();
-                            }
-                          },
-                        ),
-                        SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-                      ]),
-                    ),
-                  ),
-                ],
-              ),
-          ),
-    );
-  }
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.user;
 
+    if (authProvider.isLoading && user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-
-  Widget _buildProfileItem(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2196F3).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: const Color(0xFF2196F3), size: 24),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
+    if (authProvider.error != null && user == null) {
+      return Scaffold(
+        body: Center(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+              Text(authProvider.error!),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.read<AuthProvider>().fetchProfile(),
+                child: const Text('Coba Lagi'),
               ),
             ],
           ),
         ),
-      ],
+      );
+    }
+
+    // Wrap the entire Scaffold in AnimatedBuilder so it instantly reacts to theme changes
+    return AnimatedBuilder(
+      animation: ThemeController.instance,
+      builder: (context, _) {
+        final isDark = ThemeController.instance.isDarkMode;
+
+        return Scaffold(
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey[50],
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+              onPressed: () {
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                } else {
+                  Navigator.pushReplacementNamed(context, '/main');
+                }
+              },
+            ),
+          ),
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Avatar
+                Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                      child: ClipOval(
+                        child:
+                            (user?.profilePhoto != null &&
+                                user!.profilePhoto!.isNotEmpty)
+                            ? Image.network(
+                                _photoUrl(user.profilePhoto!),
+                                width: 92,
+                                height: 92,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 92,
+                                    height: 92,
+                                    color: Colors.grey[300],
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Container(
+                                width: 92,
+                                height: 92,
+                                color: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 50,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _pickImage(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  user?.name ?? '-',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Personal Info
+                _buildSectionTitle(
+                  'Informasi Pribadi',
+                  trailing: TextButton(
+                    onPressed: () {
+                      if (user != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditProfilePage(user: user),
+                          ),
+                        ).then((value) {
+                          if (!context.mounted) return;
+                          context.read<AuthProvider>().fetchProfile();
+                        });
+                      }
+                    },
+                    child: const Text(
+                      'EDIT',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.person_outline,
+                  iconBgColor: Colors.blue.withValues(alpha: 0.2),
+                  title: 'NAMA LENGKAP',
+                  subtitle: user?.name ?? '-',
+                ),
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.email_outlined,
+                  iconBgColor: Colors.purple.withValues(alpha: 0.2),
+                  title: 'EMAIL',
+                  subtitle: user?.email ?? '-',
+                ),
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.wc_outlined,
+                  iconBgColor: Colors.teal.withValues(alpha: 0.2),
+                  title: 'JENIS KELAMIN',
+                  subtitle: user?.jenisKelamin == 'L'
+                      ? 'Laki-laki'
+                      : (user?.jenisKelamin == 'P' ? 'Perempuan' : '-'),
+                ),
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.school_outlined,
+                  iconBgColor: Colors.blue.withValues(alpha: 0.2),
+                  title: 'JURUSAN',
+                  subtitle: _getTrainingName(user?.trainingId, authProvider),
+                ),
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.groups_outlined,
+                  iconBgColor: Colors.blue.withValues(alpha: 0.2),
+                  title: 'ANGKATAN',
+                  subtitle: user?.batchId != null ? '${user!.batchId}' : '-',
+                ),
+
+                // Security
+                _buildSectionTitle('Keamanan'),
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.lock_outline,
+                  iconBgColor: Colors.blue.withValues(alpha: 0.2),
+                  title: 'Ubah Password',
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChangePasswordPage(),
+                      ),
+                    );
+                  },
+                ),
+                Consumer<NotificationSettingsProvider>(
+                  builder: (context, notifProvider, _) {
+                    return _buildListTile(
+                      isDark: isDark,
+                      icon: Icons.notifications_outlined,
+                      iconBgColor: Colors.green.withValues(alpha: 0.2),
+                      title: 'Notifikasi',
+                      subtitle: notifProvider.isNotifEnabled
+                          ? 'Aktif'
+                          : 'Nonaktif',
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        notifProvider.toggleNotification(
+                          !notifProvider.isNotifEnabled,
+                        );
+                      },
+                    );
+                  },
+                ),
+
+                // Language
+                _buildSectionTitle('Bahasa'),
+                Consumer<LanguageProvider>(
+                  builder: (context, langProvider, _) {
+                    return _buildListTile(
+                      isDark: isDark,
+                      icon: Icons.language,
+                      iconBgColor: Colors.orange.withValues(alpha: 0.2),
+                      title: 'Bahasa',
+                      trailing: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: langProvider.language,
+                          items: <String>['English', 'Indonesia'].map((
+                            String value,
+                          ) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              langProvider.setLanguage(newValue);
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                // Appearance
+                _buildSectionTitle('Tampilan'),
+                Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    title: const Text(
+                      'Mode Gelap',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text(
+                      'Gunakan tema gelap agar lebih nyaman di mata',
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(
+                        isDark
+                            ? Icons.light_mode_rounded
+                            : Icons.dark_mode_rounded,
+                        color: isDark ? Colors.amber : Colors.grey,
+                      ),
+                      onPressed: () =>
+                          ThemeController.instance.toggleTheme(!isDark),
+                    ),
+                    onTap: () => ThemeController.instance.toggleTheme(!isDark),
+                  ),
+                ),
+
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.info_outline,
+                  iconBgColor: Colors.blue.withValues(alpha: 0.2),
+                  title: 'Tentang Aplikasi',
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showAboutDialog(context),
+                ),
+
+                // Sign Out
+                const SizedBox(height: 16),
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.logout,
+                  iconBgColor: Colors.red.withValues(alpha: 0.2),
+                  title: 'Keluar',
+                  titleColor: Colors.red,
+                  onTap: () => _confirmSignOut(context),
+                ),
+                const SizedBox(height: 100), // Space for floating bottom bar
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

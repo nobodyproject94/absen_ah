@@ -1,14 +1,11 @@
-import 'dart:developer';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../services/api_service.dart';
-import '../services/dio_client.dart';
-import '../services/token_services.dart';
-import '../utils/absensi_ui.dart';
-import 'main_page.dart';
-import 'register_page.dart';
+import '../providers/auth_provider.dart';
+import '../components/absensi_card.dart';
+import '../components/custom_text_field.dart';
+import '../components/primary_button.dart';
+import '../utils/app_colors.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -21,8 +18,6 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
-  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -34,8 +29,7 @@ class _LoginPageState extends State<LoginPage> {
   String? _requiredEmail(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return 'Email tidak boleh kosong';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text))
-      return 'Format email tidak valid';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) return 'Format email tidak valid';
     return null;
   }
 
@@ -48,152 +42,106 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
 
-    try {
-      final apiService = ApiService(createDioClient());
-      final body = {
-        'email': _emailController.text.trim(),
-        'password': _passwordController.text,
-      };
+    if (!mounted) return;
 
-      final response = await apiService.login(body);
-      log('Login response: $response');
-      final token = response.data?.token;
-
-      if (token == null || token.isEmpty) {
-        throw Exception('Token tidak diterima dari server.');
-      }
-
-      await TokenStorage.saveToken(token);
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const MainPage()),
-        (_) => false,
-      );
-    } on DioException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_dioErrorMessage(e))));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Gagal login: ${e.toString().replaceFirst('Exception: ', '')}',
+    if (success) {
+      Navigator.pushReplacementNamed(context, '/main');
+    } else {
+      if (authProvider.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.error!),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
           ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+        );
+      }
     }
-  }
-
-  String _dioErrorMessage(DioException e) {
-    if (e.response == null) return 'Gagal login: Terjadi kesalahan jaringan.';
-    final status = e.response!.statusCode;
-    if (status == 401 || status == 404)
-      return 'Gagal login: email atau password salah.';
-    if (status == 422)
-      return 'Gagal login: ${extractApiMessage(e.response?.data, 'Data login tidak valid.')}';
-    if (status == 500) return 'Gagal login: server sedang bermasalah (500).';
-    return 'Gagal login: ${extractApiMessage(e.response?.data, e.message ?? 'Terjadi kesalahan.')}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final isLoading = authProvider.isLoading;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
               Container(
                 height: 84,
                 width: 84,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(28),
                   gradient: const LinearGradient(
-                    colors: [AbsensiColors.primary, AbsensiColors.secondary],
+                    colors: [AppColors.primary, AppColors.secondary],
                   ),
                 ),
-                child: const Icon(
-                  Icons.fingerprint_rounded,
-                  color: Colors.white,
-                  size: 46,
-                ),
+                child: const Icon(Icons.fingerprint_rounded, color: Colors.white, size: 46),
               ),
               const SizedBox(height: 26),
               const Text(
                 'ABSENSI PPKD',
-                style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -0.5),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Masuk untuk mencatat kehadiran secara real-time berbasis lokasi.',
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 32),
               AbsensiCard(
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      TextFormField(
+                      CustomTextField(
+                        label: 'Email',
+                        icon: Icons.email_rounded,
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        decoration: absensiInputDecoration(
-                          'Email',
-                          Icons.email_rounded,
-                        ),
                         validator: _requiredEmail,
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
+                      CustomTextField(
+                        label: 'Password',
+                        icon: Icons.lock_rounded,
                         controller: _passwordController,
-                        obscureText: _obscurePassword,
+                        isPassword: true,
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => _login(),
-                        decoration:
-                            absensiInputDecoration(
-                              'Password',
-                              Icons.lock_rounded,
-                            ).copyWith(
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_rounded
-                                      : Icons.visibility_off_rounded,
-                                ),
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                              ),
-                            ),
                         validator: _requiredPassword,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 28),
                       PrimaryButton(
                         label: 'Login',
                         icon: Icons.login_rounded,
-                        loading: _isLoading,
+                        loading: isLoading,
                         onPressed: _login,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       TextButton(
-                        onPressed: _isLoading
+                        onPressed: isLoading
                             ? null
-                            : () => Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const RegisterPage(),
-                                ),
-                              ),
-                        child: const Text('Belum punya akun? Register di sini'),
+                            : () => Navigator.pushReplacementNamed(context, '/register'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                        ),
+                        child: const Text(
+                          'Belum punya akun? Register di sini',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ],
                   ),
@@ -206,3 +154,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+

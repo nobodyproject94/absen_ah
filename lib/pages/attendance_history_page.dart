@@ -2,8 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../models/attendance_record.dart';
+import '../providers/attendance_provider.dart';
 import '../services/dio_client.dart';
-import '../utils/absensi_ui.dart';
+import '../utils/app_colors.dart';
+import '../utils/helpers.dart';
+import '../components/absensi_card.dart';
+import '../components/primary_button.dart';
 import 'attendance_detail_map_page.dart';
 
 class AttendanceHistoryPage extends StatefulWidget {
@@ -34,7 +38,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       final response = await createDioClient().get('/api/absen/history');
       if (!mounted) return;
       setState(() {
-        _records = _parseAttendanceList(response.data);
+        _records = AttendanceProvider.parseAttendanceList(response.data);
         _loading = false;
       });
     } catch (e) {
@@ -46,21 +50,11 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     }
   }
 
-  List<AttendanceRecord> _parseAttendanceList(dynamic payload) {
-    dynamic raw = payload;
-    if (payload is Map) raw = payload['data'] ?? payload['absen'] ?? payload['history'] ?? payload['data_absen'];
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((item) => AttendanceRecord.fromJson(Map<String, dynamic>.from(item)))
-          .toList();
-    }
-    return [];
-  }
-
   Future<void> _deleteAttendance(AttendanceRecord record) async {
     if (record.id == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID absen tidak ditemukan.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID absen tidak ditemukan.')),
+      );
       return;
     }
 
@@ -71,7 +65,11 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         content: const Text('Data absensi ini akan dihapus dari server. Lanjutkan?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Hapus'),
+          ),
         ],
       ),
     );
@@ -79,20 +77,31 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     if (approved != true) return;
 
     try {
-      final response = await createDioClient().delete('/delete-absen', queryParameters: {'id': record.id});
+      final response = await createDioClient().delete('/api/absen/${record.id}');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(extractApiMessage(response.data, 'Data absen berhasil dihapus.'))),
+        SnackBar(
+          content: Text(extractApiMessage(response.data, 'Data absen berhasil dihapus.')),
+          backgroundColor: AppColors.success,
+        ),
       );
       await _fetchHistory();
     } on DioException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(extractApiMessage(e.response?.data, 'Gagal menghapus data absen.'))),
+        SnackBar(
+          content: Text(extractApiMessage(e.response?.data, 'Gagal menghapus data absen.')),
+          backgroundColor: AppColors.danger,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus data absen: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus data absen: $e'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
     }
   }
 
@@ -100,29 +109,44 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     final lat = record.displayLatitude;
     final lng = record.displayLongitude;
     if (lat == null || lng == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Koordinat lokasi tidak tersedia.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Koordinat lokasi tidak tersedia.')),
+      );
       return;
     }
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AttendanceDetailMapPage(latitude: lat, longitude: lng, title: 'Lokasi ${record.date ?? 'Absensi'}'),
+        builder: (_) => AttendanceDetailMapPage(
+          latitude: lat,
+          longitude: lng,
+          title: 'Lokasi ${record.date ?? 'Absensi'}',
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Riwayat Absensi')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _errorView()
-              : RefreshIndicator(
-                  onRefresh: _fetchHistory,
-                  child: _records.isEmpty ? _emptyView() : _listView(),
-                ),
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    
+    return RefreshIndicator(
+      onRefresh: _fetchHistory,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          const SliverAppBar(
+            title: Text('Riwayat Absensi'),
+            pinned: true,
+          ),
+          if (_error != null)
+            SliverFillRemaining(child: _errorView())
+          else if (_records.isEmpty)
+            SliverFillRemaining(child: _emptyView())
+          else
+            _sliverListView(),
+        ],
+      ),
     );
   }
 
@@ -133,7 +157,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 54, color: AbsensiColors.danger),
+            const Icon(Icons.error_outline_rounded, size: 54, color: AppColors.danger),
             const SizedBox(height: 16),
             Text(_error!, textAlign: TextAlign.center),
             const SizedBox(height: 16),
@@ -145,11 +169,9 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Widget _emptyView() {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(24),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: const [
-        SizedBox(height: 120),
         Icon(Icons.event_busy_rounded, size: 64, color: Colors.grey),
         SizedBox(height: 16),
         Text('Belum ada riwayat absensi.', textAlign: TextAlign.center),
@@ -157,67 +179,109 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     );
   }
 
-  Widget _listView() {
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
+  Widget _sliverListView() {
+    return SliverPadding(
       padding: const EdgeInsets.all(16),
-      itemCount: _records.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final record = _records[index];
-        return AbsensiCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.calendar_today_rounded, color: AbsensiColors.primary),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      record.date ?? 'Tanggal tidak tersedia',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final record = _records[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AbsensiCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, color: AppColors.primary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            record.date ?? 'Tanggal tidak tersedia',
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                          ),
+                        ),
+                        _statusChip(record),
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'map') _openMap(record);
+                            if (value == 'delete') _deleteAttendance(record);
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'map', child: Text('Lihat Map')),
+                            PopupMenuItem(value: 'delete', child: Text('Hapus Absen')),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'map') _openMap(record);
-                      if (value == 'delete') _deleteAttendance(record);
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'map', child: Text('Lihat Map')),
-                      PopupMenuItem(value: 'delete', child: Text('Hapus Absen')),
+                    const Divider(height: 24),
+                    if (record.isIzin) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Alasan Izin:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            const SizedBox(height: 4),
+                            Text(record.alasanIzin ?? '-', style: const TextStyle(fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      Row(
+                        children: [
+                          Expanded(child: _timeBox('Masuk', record.checkInTime ?? '-', Icons.login_rounded)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _timeBox('Pulang', record.checkOutTime ?? '-', Icons.logout_rounded)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Icon(Icons.place_rounded, size: 18, color: Colors.grey),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              record.displayAddress,
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const Divider(height: 24),
-              Row(
-                children: [
-                  Expanded(child: _timeBox('Masuk', record.checkInTime ?? '-', Icons.login_rounded)),
-                  const SizedBox(width: 10),
-                  Expanded(child: _timeBox('Pulang', record.checkOutTime ?? '-', Icons.logout_rounded)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.place_rounded, size: 18, color: Colors.grey),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      record.displayLatitude == null || record.displayLongitude == null
-                          ? 'Lokasi tidak tersedia'
-                          : '${record.displayLatitude}, ${record.displayLongitude}',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+            );
+          },
+          childCount: _records.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _statusChip(AttendanceRecord record) {
+    final isIzin = record.isIzin;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isIzin ? AppColors.warning.withValues(alpha: 0.15) : AppColors.success.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        isIzin ? 'Izin' : 'Masuk',
+        style: TextStyle(
+          color: isIzin ? AppColors.warning : AppColors.success,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 
@@ -226,11 +290,11 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: AbsensiColors.primary.withOpacity(.08),
+        color: AppColors.primary.withValues(alpha: .08),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AbsensiColors.primary),
+          Icon(icon, color: AppColors.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -246,3 +310,4 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     );
   }
 }
+

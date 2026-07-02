@@ -39,4 +39,26 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
 
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
+
+  UserModel copyWith({
+    int? id,
+    String? name,
+    String? email,
+    String? jenisKelamin,
+    String? profilePhoto,
+    int? batchId,
+    int? trainingId,
+    String? emailVerifiedAt,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      jenisKelamin: jenisKelamin ?? this.jenisKelamin,
+      profilePhoto: profilePhoto ?? this.profilePhoto,
+      batchId: batchId ?? this.batchId,
+      trainingId: trainingId ?? this.trainingId,
+      emailVerifiedAt: emailVerifiedAt ?? this.emailVerifiedAt,
+    );
+  }
 }
