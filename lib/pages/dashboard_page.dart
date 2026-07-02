@@ -144,7 +144,12 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildSliverAppBar(String? userName) {
     return SliverToBoxAdapter(
       child: Container(
-        padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 8, 20, 32),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          MediaQuery.of(context).padding.top + 8,
+          20,
+          32,
+        ),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -164,9 +169,15 @@ class _DashboardPageState extends State<DashboardPage> {
                 builder: (context, _) {
                   final isDark = ThemeController.instance.isDarkMode;
                   return IconButton(
-                    icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded, color: Colors.white),
+                    icon: Icon(
+                      isDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
+                      color: Colors.white,
+                    ),
                     tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
-                    onPressed: () => ThemeController.instance.toggleTheme(!isDark),
+                    onPressed: () =>
+                        ThemeController.instance.toggleTheme(!isDark),
                   );
                 },
               ),
@@ -379,18 +390,18 @@ class _DashboardPageState extends State<DashboardPage> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        // _menuCard(
-        //   Icons.map_rounded,
-        //   'Peta Lokasi',
-        //   'Detail koordinat',
-        //   _openMap,
-        // ),
-        // _menuCard(Icons.explore_rounded, 'Cari Lokasi', 'Posisi saat ini', () {
-        //   Navigator.push(
-        //     context,
-        //     MaterialPageRoute(builder: (_) => const GoogleMapsScreenDay36()),
-        //   );
-        // }),
+        _menuCard(
+          Icons.map_rounded,
+          'Peta Lokasi',
+          'Detail koordinat',
+          _openMap,
+        ),
+        _menuCard(Icons.explore_rounded, 'Cari Lokasi', 'Posisi saat ini', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GoogleMapsScreenDay36()),
+          );
+        }),
       ],
     );
   }

@@ -12,7 +12,7 @@ class SplashPage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              'assets/images/absenah.png',
+              'assets/images/absen_ah.png',
               width: 180,
               height: 180,
               fit: BoxFit.contain,
@@ -21,9 +21,9 @@ class SplashPage extends StatelessWidget {
             ),
 
             const SizedBox(height: 24),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F62FE)),
-            ),
+            // const CircularProgressIndicator(
+            //   valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F62FE)),
+            // ),
           ],
         ),
       ),

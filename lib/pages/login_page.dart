@@ -29,7 +29,8 @@ class _LoginPageState extends State<LoginPage> {
   String? _requiredEmail(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return 'Email tidak boleh kosong';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) return 'Format email tidak valid';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text))
+      return 'Format email tidak valid';
     return null;
   }
 
@@ -42,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.login(
       _emailController.text.trim(),
@@ -79,21 +80,23 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-              Container(
-                height: 84,
-                width: 84,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.secondary],
-                  ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(
+                  'assets/images/absen_ah.png',
+                  width: 84,
+                  height: 84,
+                  fit: BoxFit.cover,
                 ),
-                child: const Icon(Icons.fingerprint_rounded, color: Colors.white, size: 46),
               ),
               const SizedBox(height: 26),
               const Text(
-                'ABSENSI PPKD',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                'ABSENSI AH..',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -134,8 +137,12 @@ class _LoginPageState extends State<LoginPage> {
                       TextButton(
                         onPressed: isLoading
                             ? null
-                            : () => Navigator.pushReplacementNamed(context, '/register'),
+                            : () => Navigator.pushReplacementNamed(
+                                context,
+                                '/register',
+                              ),
                         style: TextButton.styleFrom(
+                        
                           foregroundColor: AppColors.primary,
                         ),
                         child: const Text(
@@ -154,4 +161,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
