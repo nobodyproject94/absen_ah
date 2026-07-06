@@ -156,7 +156,7 @@ class _ProfilePageState extends State<ProfilePage> {
             title,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          if (trailing != null) trailing,
+          ?trailing,
         ],
       ),
     );

@@ -29,8 +29,9 @@ class _LoginPageState extends State<LoginPage> {
   String? _requiredEmail(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return 'Email tidak boleh kosong';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text))
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) {
       return 'Format email tidak valid';
+    }
     return null;
   }
 

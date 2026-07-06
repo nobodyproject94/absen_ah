@@ -22,26 +22,57 @@ class PrimaryButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDefault = backgroundColor == null;
     final baseColor = backgroundColor ?? AppColors.primary;
-    
-    final fgColor = (isDark && !isDefault) ? Color.lerp(baseColor, Colors.white, 0.2)! : Colors.white;
+    final isButtonEnabled = onPressed != null;
+
+    final fgColor = isDark
+        ? (isButtonEnabled ? Color.lerp(baseColor, Colors.white, 0.4)! : Colors.white70)
+        : Colors.white;
+
     final sColor = isDark ? Colors.transparent : baseColor.withValues(alpha: 0.4);
 
-    final gradient = isDefault
-        ? const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [AppColors.primary, AppColors.secondary],
-          )
-        : LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              baseColor,
-              Color.lerp(baseColor, Colors.white, 0.25)!
-            ],
-          );
+    final gradient = isDark
+        ? (isButtonEnabled
+            ? LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  baseColor.withValues(alpha: 0.15),
+                  baseColor.withValues(alpha: 0.25),
+                ],
+              )
+            : LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.05),
+                  Colors.white.withValues(alpha: 0.1),
+                ],
+              ))
+        : (isDefault
+            ? const LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [AppColors.primary, AppColors.secondary],
+              )
+            : LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  baseColor,
+                  Color.lerp(baseColor, Colors.white, 0.25)!,
+                ],
+              ));
 
-    final bgColor = Colors.transparent; // Since all buttons now have gradients, background should be transparent
+    final border = isDark
+        ? Border.all(
+            color: isButtonEnabled
+                ? baseColor.withValues(alpha: 0.4)
+                : Colors.white.withValues(alpha: 0.1),
+            width: 1.5,
+          )
+        : null;
+
+    final bgColor = Colors.transparent;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -51,7 +82,8 @@ class PrimaryButton extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         gradient: gradient,
-        boxShadow: (!isDark && !loading)
+        border: border,
+        boxShadow: (!isDark && isButtonEnabled && !loading)
             ? [BoxShadow(color: sColor, blurRadius: 6, offset: const Offset(0, 3))]
             : null,
       ),
@@ -68,9 +100,11 @@ class PrimaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: bgColor,
           foregroundColor: fgColor,
+          disabledForegroundColor: isDark ? Colors.white30 : null,
+          disabledBackgroundColor: isDark ? Colors.transparent : null,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          elevation: 0, // Elevation is handled by AnimatedContainer's boxShadow
+          elevation: 0,
           shadowColor: Colors.transparent,
         ),
       ),

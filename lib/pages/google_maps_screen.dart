@@ -3,14 +3,16 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../services/location_service.dart';class GoogleMapsScreenDay36 extends StatefulWidget {
-  const GoogleMapsScreenDay36({super.key});
+import '../services/location_service.dart';
+
+class GoogleMapsScreen extends StatefulWidget {
+  const GoogleMapsScreen({super.key});
 
   @override
-  State<GoogleMapsScreenDay36> createState() => _GoogleMapsScreenDay36State();
+  State<GoogleMapsScreen> createState() => _GoogleMapsScreenState();
 }
 
-class _GoogleMapsScreenDay36State extends State<GoogleMapsScreenDay36> {
+class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
   GoogleMapController? _mapController;
   Position? _currentPosition;
   String _currentAddress = "Mencari Lokasi...";
@@ -40,7 +42,6 @@ class _GoogleMapsScreenDay36State extends State<GoogleMapsScreenDay36> {
       });
     }
   }
-
 
   void _updateMarkerAndCamera(Position position) {
     LatLng currentLatLng = LatLng(position.latitude, position.longitude);

@@ -8,8 +8,7 @@ import '../components/primary_button.dart';
 import '../utils/app_colors.dart';
 import '../utils/helpers.dart';
 import '../utils/theme_controller.dart';
-import 'attendance_detail_map_page.dart';
-import 'google_maps_screen.dart';
+import 'attendance_submit_map_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -31,60 +30,7 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
-  Future<void> _submitAttendance(BuildContext context, bool isCheckIn) async {
-    final provider = context.read<AttendanceProvider>();
-    try {
-      final message = await provider.submitAttendance(isCheckIn: isCheckIn);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message ??
-                (isCheckIn
-                    ? 'Absen masuk berhasil.'
-                    : 'Absen pulang berhasil.'),
-          ),
-          backgroundColor: AppColors.success,
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-    }
-  }
 
-  void _openMap() {
-    final provider = context.read<AttendanceProvider>();
-    final today = provider.todayRecord;
-    final lat = today?.displayLatitude ?? provider.lastPosition?.latitude;
-    final lng = today?.displayLongitude ?? provider.lastPosition?.longitude;
-
-    if (lat == null || lng == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Lokasi belum tersedia. Lakukan absensi terlebih dahulu.',
-          ),
-        ),
-      );
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AttendanceDetailMapPage(
-          latitude: lat,
-          longitude: lng,
-          title: "Lokasi Absen",
-        ),
-      ),
-    );
-  }
 
   String _greeting() {
     final hour = DateTime.now().hour;
@@ -129,8 +75,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         _buildActionButtons(attendanceProvider),
                         const SizedBox(height: 18),
                         _buildStats(attendanceProvider),
-                        const SizedBox(height: 18),
-                        _buildMenuGrid(),
+
                         const SizedBox(height: 120),
                       ]),
                     ),
@@ -306,7 +251,14 @@ class _DashboardPageState extends State<DashboardPage> {
                 icon: Icons.my_location_rounded,
                 loading: provider.isCheckingIn,
                 backgroundColor: AppColors.success,
-                onPressed: () => _submitAttendance(context, true),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AttendanceSubmitMapPage(isCheckIn: true),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -316,7 +268,14 @@ class _DashboardPageState extends State<DashboardPage> {
                 icon: Icons.pin_drop_rounded,
                 loading: provider.isCheckingOut,
                 backgroundColor: AppColors.warning,
-                onPressed: () => _submitAttendance(context, false),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AttendanceSubmitMapPage(isCheckIn: false),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -380,55 +339,5 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildMenuGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 14,
-      mainAxisSpacing: 14,
-      childAspectRatio: 1.25,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      // children: [
-      //   _menuCard(
-      //     Icons.map_rounded,
-      //     'Peta Lokasi',
-      //     'Detail koordinat',
-      //     _openMap,
-      //   ),
-      //   _menuCard(Icons.explore_rounded, 'Cari Lokasi', 'Posisi saat ini', () {
-      //     Navigator.push(
-      //       context,
-      //       MaterialPageRoute(builder: (_) => const GoogleMapsScreenDay36()),
-      //     );
-      //   }),
-      // ],
-    );
-  }
 
-  Widget _menuCard(
-    IconData icon,
-    String title,
-    String subtitle,
-    VoidCallback onTap,
-  ) {
-    return AbsensiCard(
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.primary, size: 32),
-          const Spacer(),
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
 }
