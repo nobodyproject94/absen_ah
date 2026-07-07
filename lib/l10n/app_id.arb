@@ -1,0 +1,206 @@
+{
+  "@@locale": "id",
+  "navHome": "Home",
+  "navHistory": "Riwayat",
+  "navProfile": "Profil",
+  "appTitle": "ABSENSI AH..",
+  "loginSubtitle": "Masuk untuk mencatat kehadiran secara real-time berbasis lokasi.",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "loginButton": "Login",
+  "noAccountRegister": "Belum punya akun? Register di sini",
+  "errEmailEmpty": "Email tidak boleh kosong",
+  "errEmailInvalid": "Format email tidak valid",
+  "errPasswordEmpty": "Password tidak boleh kosong",
+  "errPasswordMin": "Password minimal 6 karakter",
+  "registerTitle": "Registrasi",
+  "registerHeader": "Buat Akun Baru",
+  "registerSubtitle": "Daftar untuk mulai absensi hari ini.",
+  "fullNameLabel": "Nama Lengkap",
+  "genderLabel": "Jenis Kelamin",
+  "genderMale": "Laki-laki",
+  "genderFemale": "Perempuan",
+  "registerButton": "Daftar",
+  "hasAccountLogin": "Sudah punya akun? Login di sini",
+  "errFieldEmpty": "{field} tidak boleh kosong",
+  "@errFieldEmpty": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingMorning": "Selamat pagi",
+  "greetingAfternoon": "Selamat siang",
+  "greetingEvening": "Selamat sore",
+  "greetingNight": "Selamat malam",
+  "defaultUser": "Peserta PPKD",
+  "lightModeTooltip": "Mode Terang",
+  "darkModeTooltip": "Mode Gelap",
+  "todayAttendance": "Absensi Hari Ini",
+  "timeAnomalyBadge": "⚠️ Anomali Waktu",
+  "statusLate": "• Terlambat",
+  "statusOnTime": "• Tepat Waktu",
+  "checkInLabel": "Masuk",
+  "checkOutLabel": "Pulang",
+  "permitButton": "Ajukan Izin / Sakit",
+  "statTotal": "Total",
+  "statPresent": "Masuk",
+  "statPermit": "Izin",
+  "tryAgainButton": "Coba Lagi",
+  "historyTitle": "Riwayat Absensi",
+  "emptyHistory": "Belum ada riwayat absensi.",
+  "dateNotAvailable": "Tanggal tidak tersedia",
+  "viewMapMenu": "Lihat Map",
+  "deleteAttendanceMenu": "Hapus Absen",
+  "permitReasonLabel": "Alasan Izin:",
+  "errIdNotFound": "ID absen tidak ditemukan.",
+  "deleteDialogTitle": "Hapus Absen?",
+  "deleteDialogContent": "Data absensi ini akan dihapus dari server. Lanjutkan?",
+  "cancelButton": "Batal",
+  "deleteButton": "Hapus",
+  "errCoordsNotAvailable": "Koordinat lokasi tidak tersedia.",
+  "submitMapTitleCheckIn": "Absen Masuk (Live Map)",
+  "submitMapTitleCheckOut": "Absen Pulang (Live Map)",
+  "officeName": "Kantor PPKD",
+  "officeDesc": "Pusat Pelatihan Kerja Daerah",
+  "yourPosition": "Posisi Anda ({distance}m)",
+  "@yourPosition": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "gpsAccuracy": "Akurasi GPS: ±{accuracy}m",
+  "@gpsAccuracy": {
+    "placeholders": {
+      "accuracy": {
+        "type": "String"
+      }
+    }
+  },
+  "detectingLocation": "Mendeteksi lokasi & sinyal GPS real-time...",
+  "inGeofence": "Dalam Radius Geofence",
+  "outGeofence": "Di Luar Radius Kantor",
+  "distanceInfo": "Jarak: {distance}m (Max {max}m)",
+  "@distanceInfo": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "gpsWeak": "(Lemah >50m)",
+  "gpsGood": "(Baik)",
+  "tooFarButton": "Terlalu Jauh dari Kantor",
+  "searchingGpsButton": "Mencari Sinyal GPS Stabil...",
+  "confirmCheckInButton": "Konfirmasi Absen Masuk",
+  "confirmCheckOutButton": "Konfirmasi Absen Pulang",
+  "detailMapTitle": "Lokasi Absensi",
+  "pointInfoTitle": "Keterangan Titik Absensi:",
+  "checkInPointInfo": "Masuk ({time}): {address}",
+  "@checkInPointInfo": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "checkOutPointInfo": "Pulang ({time}): {address}",
+  "@checkOutPointInfo": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "googleMapsTitle": "Google Maps",
+  "searchingLocation": "Mencari Lokasi...",
+  "yourLocation": "Lokasi Anda",
+  "currentAddressLabel": "Alamat Anda Saat Ini:",
+  "openInGoogleMaps": "Buka di Google Maps",
+  "errOpenExternalMap": "Gagal membuka peta eksternal: {error}",
+  "@errOpenExternalMap": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "permitFormTitle": "Pengajuan Izin",
+  "permitFormHeader": "Formulir Izin / Tidak Masuk",
+  "permitFormSubtitle": "Silakan lengkapi data di bawah ini dengan jelas.",
+  "permitDateLabel": "Tanggal Izin",
+  "selectDateHint": "Pilih Tanggal...",
+  "permitReasonFieldLabel": "Alasan Izin",
+  "permitReasonHint": "Contoh: Sakit demam berdarah (lampiran surat dokter)",
+  "submitPermitButton": "Ajukan Izin",
+  "errSelectDateFirst": "Pilih tanggal izin terlebih dahulu.",
+  "errPermitReasonEmpty": "Alasan izin tidak boleh kosong.",
+  "pickFromGallery": "Pilih dari Galeri",
+  "takePhotoCamera": "Ambil Foto (Kamera)",
+  "photoUpdateSuccess": "Foto profil berhasil diubah.",
+  "photoUpdateFailed": "Gagal mengubah foto profil.",
+  "signOutTitle": "Sign Out",
+  "signOutConfirm": "Apakah Anda yakin ingin keluar dari sesi ini?",
+  "signOutButton": "Keluar",
+  "personalInfoSection": "Informasi Pribadi",
+  "editButton": "EDIT",
+  "fieldFullName": "NAMA LENGKAP",
+  "fieldEmail": "EMAIL",
+  "fieldGender": "JENIS KELAMIN",
+  "fieldMajor": "JURUSAN",
+  "fieldBatch": "ANGKATAN",
+  "securitySection": "Keamanan",
+  "changePasswordMenu": "Ubah Password",
+  "notificationMenu": "Notifikasi",
+  "notifActive": "Aktif",
+  "notifInactive": "Nonaktif",
+  "languageSection": "Bahasa",
+  "appearanceSection": "Tampilan",
+  "darkModeMenu": "Mode Gelap",
+  "darkModeDesc": "Gunakan tema gelap agar lebih nyaman di mata",
+  "aboutAppMenu": "Tentang Aplikasi",
+  "loadingText": "Memuat...",
+  "editProfileTitle": "Edit Profil",
+  "requiredField": "Wajib diisi",
+  "majorFieldLabel": "Jurusan (Pelatihan)",
+  "batchFieldLabel": "Angkatan",
+  "saveChangesButton": "Simpan Perubahan",
+  "profileUpdateSuccess": "Profile berhasil diupdate!",
+  "profileUpdateFailed": "Gagal update profile.",
+  "changePasswordTitle": "Ubah Password",
+  "stubWarning": "Perhatian: API /api/change-password belum tersedia. Operasi ini saat ini hanya berupa simulasi (stub).",
+  "currentPasswordLabel": "Password Saat Ini",
+  "newPasswordLabel": "Password Baru",
+  "confirmNewPasswordLabel": "Konfirmasi Password Baru",
+  "errPasswordMismatch": "Password tidak cocok",
+  "updatePasswordButton": "Perbarui Password",
+  "passwordChangeSuccess": "Password berhasil diubah.",
+  "passwordChangeFailed": "Gagal merubah password.",
+  "errAlreadyCheckedInToday": "Anda sudah absen hari ini.",
+  "errAlreadyPermittedToday": "Anda sudah mengajukan izin pada tanggal ini.",
+  "errSessionExpired": "Sesi Anda telah habis. Silakan login kembali.",
+  "errNetworkError": "Terjadi kesalahan jaringan. Periksa koneksi internet Anda.",
+  "errServer500": "Server sedang bermasalah. Coba beberapa saat lagi.",
+  "errInvalidData": "Data yang dikirim tidak valid.",
+  "errCheckInFailed": "Gagal melakukan absen masuk.",
+  "errCheckOutFailed": "Gagal melakukan absen pulang. Anda belum absen masuk hari ini.",
+  "errPermitFailed": "Gagal mengajukan izin.",
+  "errDeleteFailed": "Gagal menghapus data absensi.",
+  "errLoginFailed": "Gagal login. Periksa email dan password Anda.",
+  "permitSuccess": "Izin berhasil diajukan.",
+  "checkInSuccess": "Absen masuk berhasil.",
+  "checkOutSuccess": "Absen pulang berhasil.",
+  "deleteSuccess": "Data absen berhasil dihapus."
+}

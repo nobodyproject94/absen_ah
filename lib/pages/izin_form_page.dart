@@ -6,6 +6,8 @@ import '../components/primary_button.dart';
 import '../providers/attendance_provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/helpers.dart';
+import '../utils/error_translator.dart';
+import '../l10n/app_localizations.dart';
 
 class IzinFormPage extends StatefulWidget {
   const IzinFormPage({super.key});
@@ -47,20 +49,20 @@ class _IzinFormPageState extends State<IzinFormPage> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih tanggal izin terlebih dahulu.'), backgroundColor: AppColors.warning),
+        SnackBar(content: Text(l10n.errSelectDateFirst), backgroundColor: AppColors.warning),
       );
       return;
     }
     if (_alasanController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alasan izin tidak boleh kosong.'), backgroundColor: AppColors.warning),
+        SnackBar(content: Text(l10n.errPermitReasonEmpty), backgroundColor: AppColors.warning),
       );
       return;
     }
 
-    // Format date to YYYY-MM-DD
     final y = _selectedDate!.year;
     final m = _selectedDate!.month.toString().padLeft(2, '0');
     final d = _selectedDate!.day.toString().padLeft(2, '0');
@@ -74,13 +76,13 @@ class _IzinFormPageState extends State<IzinFormPage> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message ?? 'Izin berhasil diajukan.'), backgroundColor: AppColors.success),
+        SnackBar(content: Text(message ?? l10n.permitSuccess), backgroundColor: AppColors.success),
       );
       Navigator.pop(context); // Return to Dashboard
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.danger),
+        SnackBar(content: Text(ErrorTranslator.translate(context, e)), backgroundColor: AppColors.danger),
       );
     }
   }
@@ -94,10 +96,11 @@ class _IzinFormPageState extends State<IzinFormPage> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AttendanceProvider>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pengajuan Izin'),
+        title: Text(l10n.permitFormTitle),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -105,19 +108,18 @@ class _IzinFormPageState extends State<IzinFormPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Formulir Izin / Tidak Masuk',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            Text(
+              l10n.permitFormHeader,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Silakan lengkapi data di bawah ini dengan jelas.',
-              style: TextStyle(color: Colors.grey),
+            Text(
+              l10n.permitFormSubtitle,
+              style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 32),
             
-            // Date Picker Field
-            const Text('Tanggal Izin', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.permitDateLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             InkWell(
               onTap: _pickDate,
@@ -133,7 +135,7 @@ class _IzinFormPageState extends State<IzinFormPage> {
                     const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
                     const SizedBox(width: 12),
                     Text(
-                      _selectedDate == null ? 'Pilih Tanggal...' : readableDate(_selectedDate!),
+                      _selectedDate == null ? l10n.selectDateHint : readableDate(_selectedDate!),
                       style: TextStyle(
                         fontSize: 16,
                         color: _selectedDate == null ? Colors.grey : null,
@@ -145,10 +147,9 @@ class _IzinFormPageState extends State<IzinFormPage> {
             ),
             const SizedBox(height: 24),
             
-            // Alasan Text Field
             CustomTextField(
-              label: 'Alasan Izin',
-              hintText: 'Contoh: Sakit demam berdarah (lampiran surat dokter)',
+              label: l10n.permitReasonFieldLabel,
+              hintText: l10n.permitReasonHint,
               controller: _alasanController,
               icon: Icons.edit_document,
               maxLines: 4,
@@ -156,7 +157,7 @@ class _IzinFormPageState extends State<IzinFormPage> {
             const SizedBox(height: 40),
             
             PrimaryButton(
-              label: 'Ajukan Izin',
+              label: l10n.submitPermitButton,
               icon: Icons.send_rounded,
               loading: provider.isSubmittingIzin,
               onPressed: _submit,

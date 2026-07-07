@@ -1,0 +1,206 @@
+{
+  "@@locale": "en",
+  "navHome": "Home",
+  "navHistory": "History",
+  "navProfile": "Profile",
+  "appTitle": "ABSENSI AH..",
+  "loginSubtitle": "Sign in to record real-time location-based attendance.",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "loginButton": "Login",
+  "noAccountRegister": "Don't have an account? Register here",
+  "errEmailEmpty": "Email cannot be empty",
+  "errEmailInvalid": "Invalid email format",
+  "errPasswordEmpty": "Password cannot be empty",
+  "errPasswordMin": "Password must be at least 6 characters",
+  "registerTitle": "Registration",
+  "registerHeader": "Create New Account",
+  "registerSubtitle": "Register to start recording attendance today.",
+  "fullNameLabel": "Full Name",
+  "genderLabel": "Gender",
+  "genderMale": "Male",
+  "genderFemale": "Female",
+  "registerButton": "Register",
+  "hasAccountLogin": "Already have an account? Login here",
+  "errFieldEmpty": "{field} cannot be empty",
+  "@errFieldEmpty": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingMorning": "Good morning",
+  "greetingAfternoon": "Good afternoon",
+  "greetingEvening": "Good evening",
+  "greetingNight": "Good night",
+  "defaultUser": "PPKD Participant",
+  "lightModeTooltip": "Light Mode",
+  "darkModeTooltip": "Dark Mode",
+  "todayAttendance": "Today's Attendance",
+  "timeAnomalyBadge": "⚠️ Time Anomaly",
+  "statusLate": "• Late",
+  "statusOnTime": "• On Time",
+  "checkInLabel": "Check In",
+  "checkOutLabel": "Check Out",
+  "permitButton": "Request Permit / Sick Leave",
+  "statTotal": "Total",
+  "statPresent": "Present",
+  "statPermit": "Permit",
+  "tryAgainButton": "Try Again",
+  "historyTitle": "Attendance History",
+  "emptyHistory": "No attendance history yet.",
+  "dateNotAvailable": "Date not available",
+  "viewMapMenu": "View Map",
+  "deleteAttendanceMenu": "Delete Attendance",
+  "permitReasonLabel": "Permit Reason:",
+  "errIdNotFound": "Attendance ID not found.",
+  "deleteDialogTitle": "Delete Attendance?",
+  "deleteDialogContent": "This attendance record will be deleted from server. Continue?",
+  "cancelButton": "Cancel",
+  "deleteButton": "Delete",
+  "errCoordsNotAvailable": "Location coordinates not available.",
+  "submitMapTitleCheckIn": "Check In (Live Map)",
+  "submitMapTitleCheckOut": "Check Out (Live Map)",
+  "officeName": "PPKD Office",
+  "officeDesc": "Regional Vocational Training Center",
+  "yourPosition": "Your Position ({distance}m)",
+  "@yourPosition": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "gpsAccuracy": "GPS Accuracy: ±{accuracy}m",
+  "@gpsAccuracy": {
+    "placeholders": {
+      "accuracy": {
+        "type": "String"
+      }
+    }
+  },
+  "detectingLocation": "Detecting real-time location & GPS signal...",
+  "inGeofence": "Within Geofence Radius",
+  "outGeofence": "Outside Office Radius",
+  "distanceInfo": "Distance: {distance}m (Max {max}m)",
+  "@distanceInfo": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "gpsWeak": "(Weak >50m)",
+  "gpsGood": "(Good)",
+  "tooFarButton": "Too Far from Office",
+  "searchingGpsButton": "Searching for Stable GPS...",
+  "confirmCheckInButton": "Confirm Check In",
+  "confirmCheckOutButton": "Confirm Check Out",
+  "detailMapTitle": "Attendance Location",
+  "pointInfoTitle": "Attendance Point Details:",
+  "checkInPointInfo": "Check In ({time}): {address}",
+  "@checkInPointInfo": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "checkOutPointInfo": "Check Out ({time}): {address}",
+  "@checkOutPointInfo": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "googleMapsTitle": "Google Maps",
+  "searchingLocation": "Searching Location...",
+  "yourLocation": "Your Location",
+  "currentAddressLabel": "Your Current Address:",
+  "openInGoogleMaps": "Open in Google Maps",
+  "errOpenExternalMap": "Failed to open external map: {error}",
+  "@errOpenExternalMap": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "permitFormTitle": "Permit Application",
+  "permitFormHeader": "Permit / Absence Form",
+  "permitFormSubtitle": "Please fill in the details below clearly.",
+  "permitDateLabel": "Permit Date",
+  "selectDateHint": "Select Date...",
+  "permitReasonFieldLabel": "Permit Reason",
+  "permitReasonHint": "Example: Dengue fever (medical certificate attached)",
+  "submitPermitButton": "Submit Permit",
+  "errSelectDateFirst": "Please select permit date first.",
+  "errPermitReasonEmpty": "Permit reason cannot be empty.",
+  "pickFromGallery": "Choose from Gallery",
+  "takePhotoCamera": "Take Photo (Camera)",
+  "photoUpdateSuccess": "Profile photo updated successfully.",
+  "photoUpdateFailed": "Failed to update profile photo.",
+  "signOutTitle": "Sign Out",
+  "signOutConfirm": "Are you sure you want to sign out of this session?",
+  "signOutButton": "Sign Out",
+  "personalInfoSection": "Personal Information",
+  "editButton": "EDIT",
+  "fieldFullName": "FULL NAME",
+  "fieldEmail": "EMAIL",
+  "fieldGender": "GENDER",
+  "fieldMajor": "MAJOR",
+  "fieldBatch": "BATCH",
+  "securitySection": "Security",
+  "changePasswordMenu": "Change Password",
+  "notificationMenu": "Notifications",
+  "notifActive": "Active",
+  "notifInactive": "Inactive",
+  "languageSection": "Language",
+  "appearanceSection": "Appearance",
+  "darkModeMenu": "Dark Mode",
+  "darkModeDesc": "Use dark theme for better eye comfort",
+  "aboutAppMenu": "About Application",
+  "loadingText": "Loading...",
+  "editProfileTitle": "Edit Profile",
+  "requiredField": "Required field",
+  "majorFieldLabel": "Major (Training)",
+  "batchFieldLabel": "Batch",
+  "saveChangesButton": "Save Changes",
+  "profileUpdateSuccess": "Profile updated successfully!",
+  "profileUpdateFailed": "Failed to update profile.",
+  "changePasswordTitle": "Change Password",
+  "stubWarning": "Notice: /api/change-password API is not yet available. This operation is currently simulated (stub).",
+  "currentPasswordLabel": "Current Password",
+  "newPasswordLabel": "New Password",
+  "confirmNewPasswordLabel": "Confirm New Password",
+  "errPasswordMismatch": "Passwords do not match",
+  "updatePasswordButton": "Update Password",
+  "passwordChangeSuccess": "Password changed successfully.",
+  "passwordChangeFailed": "Failed to change password.",
+  "errAlreadyCheckedInToday": "You have already checked in today.",
+  "errAlreadyPermittedToday": "You have already submitted a permit for this date.",
+  "errSessionExpired": "Your session has expired. Please login again.",
+  "errNetworkError": "Network error occurred. Please check your internet connection.",
+  "errServer500": "Server error occurred. Please try again later.",
+  "errInvalidData": "Submitted data is invalid.",
+  "errCheckInFailed": "Failed to check in.",
+  "errCheckOutFailed": "Failed to check out. You haven't checked in today.",
+  "errPermitFailed": "Failed to submit permit.",
+  "errDeleteFailed": "Failed to delete attendance data.",
+  "errLoginFailed": "Login failed. Please check your email and password.",
+  "permitSuccess": "Permit submitted successfully.",
+  "checkInSuccess": "Check-in successful.",
+  "checkOutSuccess": "Check-out successful.",
+  "deleteSuccess": "Attendance data deleted successfully."
+}

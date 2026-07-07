@@ -6,4 +6,13 @@ class AppConstants {
 
   // Geofence Radius in meters
   static const double attendanceRadius = 500.0;
+
+  // Time Deadline for Check-In (e.g. 08:00 AM)
+  static const String checkInDeadline = "08:00";
+
+  // Time Anomaly Threshold in milliseconds (5 minutes)
+  static const int timeAnomalyThresholdMs = 5 * 60 * 1000;
+
+  // Minimum GPS Accuracy required in meters (50 meters)
+  static const double minGpsAccuracyMeters = 50.0;
 }

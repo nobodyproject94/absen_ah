@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/attendance_record.dart';
 import '../services/dio_client.dart';
 import '../services/location_service.dart';
+import '../utils/app_constants.dart';
 import '../utils/helpers.dart';
 
 class AttendanceProvider extends ChangeNotifier {
@@ -114,8 +115,14 @@ class AttendanceProvider extends ChangeNotifier {
     return '$lat, $lng';
   }
 
-  /// Submit check-in or check-out
-  Future<String?> submitAttendance({required bool isCheckIn, Position? position}) async {
+  /// Submit check-in or check-out dengan validasi waktu server & geofencing akurasi tinggi
+  Future<String?> submitAttendance({
+    required bool isCheckIn,
+    Position? position,
+    double? accuracy,
+    DateTime? deviceTime,
+    int? clientOffsetMs,
+  }) async {
     if (isCheckIn) {
       _isCheckingIn = true;
     } else {
@@ -124,13 +131,32 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Use provided position from the map, otherwise fallback to fetching
       final finalPosition = position ?? await LocationService.getCurrentPosition();
       _lastPosition = finalPosition;
+      final finalAccuracy = accuracy ?? finalPosition.accuracy;
 
-      final now = DateTime.now();
-      final dateStr = '${now.year}-${_dd(now.month)}-${_dd(now.day)}';
-      final timeStr = '${_dd(now.hour)}:${_dd(now.minute)}';
+      // 1. Validasi akurasi GPS
+      if (finalAccuracy > AppConstants.minGpsAccuracyMeters) {
+        throw Exception('Akurasi GPS terlalu rendah (${finalAccuracy.toStringAsFixed(0)}m). Butuh ≤${AppConstants.minGpsAccuracyMeters.toStringAsFixed(0)}m. Cari area terbuka.');
+      }
+
+      // 2. Validasi Jarak Geofence sisi klien
+      final distance = Geolocator.distanceBetween(
+        finalPosition.latitude,
+        finalPosition.longitude,
+        AppConstants.officeLatitude,
+        AppConstants.officeLongitude,
+      );
+      if (distance > AppConstants.attendanceRadius) {
+        throw Exception('Anda berada di luar radius kantor (${distance.toStringAsFixed(0)}m dari kantor). Batas maksimal ${AppConstants.attendanceRadius.toStringAsFixed(0)}m.');
+      }
+
+      // 3. Waktu tersinkron server
+      final now = deviceTime ?? DateTime.now();
+      final offsetMs = clientOffsetMs ?? 0;
+      final serverSyncedTime = now.add(Duration(milliseconds: offsetMs));
+      final dateStr = '${serverSyncedTime.year}-${_dd(serverSyncedTime.month)}-${_dd(serverSyncedTime.day)}';
+      final timeStr = '${_dd(serverSyncedTime.hour)}:${_dd(serverSyncedTime.minute)}';
       final address = await _getAddressFromCoords(finalPosition.latitude, finalPosition.longitude);
 
       Map<String, dynamic> body;
@@ -145,6 +171,10 @@ class AttendanceProvider extends ChangeNotifier {
           'check_in_lng': finalPosition.longitude,
           'check_in_address': address,
           'status': 'masuk',
+          'device_timestamp': now.toIso8601String(),
+          'client_offset_ms': offsetMs,
+          'accuracy_meters': finalAccuracy,
+          'distance_to_office_m': distance,
         };
       } else {
         endpoint = '/api/absen/check-out';
@@ -154,6 +184,10 @@ class AttendanceProvider extends ChangeNotifier {
           'check_out_lat': finalPosition.latitude,
           'check_out_lng': finalPosition.longitude,
           'check_out_address': address,
+          'device_timestamp': now.toIso8601String(),
+          'client_offset_ms': offsetMs,
+          'accuracy_meters': finalAccuracy,
+          'distance_to_office_m': distance,
         };
       }
 

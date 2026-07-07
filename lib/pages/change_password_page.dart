@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../utils/error_translator.dart';
+import '../l10n/app_localizations.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -27,6 +29,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 
   void _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
@@ -40,12 +43,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       setState(() => _isLoading = false);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password berhasil diubah.')),
+          SnackBar(content: Text(l10n.passwordChangeSuccess)),
         );
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.error ?? 'Gagal merubah password.')),
+          SnackBar(content: Text(provider.error != null ? ErrorTranslator.translate(context, provider.error!) : l10n.passwordChangeFailed)),
         );
       }
     }
@@ -53,8 +56,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Ubah Password')),
+      appBar: AppBar(title: Text(l10n.changePasswordTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -62,14 +66,13 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // TODO: Implement endpoint in ApiService when backend is ready
-              const Card(
+              Card(
                 color: Colors.amberAccent,
                 child: Padding(
-                  padding: EdgeInsets.all(12.0),
+                  padding: const EdgeInsets.all(12.0),
                   child: Text(
-                    'Perhatian: API /api/change-password belum tersedia. Operasi ini saat ini hanya berupa simulasi (stub).',
-                    style: TextStyle(color: Colors.black87),
+                    l10n.stubWarning,
+                    style: const TextStyle(color: Colors.black87),
                   ),
                 ),
               ),
@@ -77,17 +80,17 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               TextFormField(
                 controller: _oldPasswordController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password Saat Ini', border: OutlineInputBorder()),
-                validator: (value) => (value == null || value.isEmpty) ? 'Wajib diisi' : null,
+                decoration: InputDecoration(labelText: l10n.currentPasswordLabel, border: const OutlineInputBorder()),
+                validator: (value) => (value == null || value.isEmpty) ? l10n.requiredField : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _newPasswordController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password Baru', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.newPasswordLabel, border: const OutlineInputBorder()),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Wajib diisi';
-                  if (value.length < 6) return 'Minimal 6 karakter';
+                  if (value == null || value.isEmpty) return l10n.requiredField;
+                  if (value.length < 6) return l10n.errPasswordMin;
                   return null;
                 },
               ),
@@ -95,10 +98,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Konfirmasi Password Baru', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.confirmNewPasswordLabel, border: const OutlineInputBorder()),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Wajib diisi';
-                  if (value != _newPasswordController.text) return 'Password tidak cocok';
+                  if (value == null || value.isEmpty) return l10n.requiredField;
+                  if (value != _newPasswordController.text) return l10n.errPasswordMismatch;
                   return null;
                 },
               ),
@@ -108,7 +111,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
                 child: _isLoading 
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Perbarui Password', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    : Text(l10n.updatePasswordButton, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ],
           ),

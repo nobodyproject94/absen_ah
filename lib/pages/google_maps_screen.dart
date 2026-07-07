@@ -4,6 +4,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/location_service.dart';
+import '../utils/app_constants.dart';
+import '../utils/app_colors.dart';
+import '../l10n/app_localizations.dart';
 
 class GoogleMapsScreen extends StatefulWidget {
   const GoogleMapsScreen({super.key});
@@ -15,9 +18,10 @@ class GoogleMapsScreen extends StatefulWidget {
 class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
   GoogleMapController? _mapController;
   Position? _currentPosition;
-  String _currentAddress = "Mencari Lokasi...";
+  String _currentAddress = "";
+  bool _isLoadingAddress = true;
   final Set<Marker> _markers = {};
-  final LatLng _defaultLocation = const LatLng(-6.2000, 108.8166666);
+  final LatLng _officeLocation = const LatLng(AppConstants.officeLatitude, AppConstants.officeLongitude);
 
   @override
   void initState() {
@@ -26,12 +30,14 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
   }
 
   Future<void> _checkPermissionsAndGetLocation() async {
+    setState(() {
+      _isLoadingAddress = true;
+    });
     try {
       Position position = await LocationService.getCurrentPosition();
       if (!mounted) return;
       setState(() {
         _currentPosition = position;
-        _currentAddress = "Mencari Lokasi...";
       });
       _updateMarkerAndCamera(position);
       await _getAddressFromLatLng(position);
@@ -39,11 +45,13 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
       if (!mounted) return;
       setState(() {
         _currentAddress = e.toString().replaceAll('Exception: ', '');
+        _isLoadingAddress = false;
       });
     }
   }
 
   void _updateMarkerAndCamera(Position position) {
+    final l10n = AppLocalizations.of(context)!;
     LatLng currentLatLng = LatLng(position.latitude, position.longitude);
 
     if (mounted) {
@@ -53,7 +61,7 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
           Marker(
             markerId: const MarkerId("currentLocation"),
             position: currentLatLng,
-            infoWindow: const InfoWindow(title: "Lokasi Anda"),
+            infoWindow: InfoWindow(title: l10n.yourLocation),
           ),
         );
       });
@@ -79,21 +87,27 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
           setState(() {
             _currentAddress =
                 "${place.street}, ${place.subLocality}, ${place.locality}, ${place.postalCode}, ${place.country}";
+            _isLoadingAddress = false;
           });
         }
       }
     } catch (e) {
       debugPrint("Error getting address: $e");
+      if (mounted) {
+        setState(() {
+          _isLoadingAddress = false;
+        });
+      }
     }
   }
 
   Future<void> _openInGoogleMaps() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_currentPosition == null) return;
 
     final double lat = _currentPosition!.latitude;
     final double lng = _currentPosition!.longitude;
 
-    // Skema URL universal untuk mencari koordinat di Google Maps
     final Uri googleMapsUrl = Uri.parse(
       "https://www.google.com/maps/search/?api=1&query=$lat,$lng",
     );
@@ -107,7 +121,7 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal membuka peta eksternal: $e")),
+          SnackBar(content: Text(l10n.errOpenExternalMap(e.toString()))),
         );
       }
     }
@@ -115,8 +129,9 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Google Maps')),
+      appBar: AppBar(title: Text(l10n.googleMapsTitle)),
       body: Stack(
         children: [
           GoogleMap(
@@ -126,10 +141,28 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
                       _currentPosition!.latitude,
                       _currentPosition!.longitude,
                     )
-                  : _defaultLocation,
-              zoom: 13.0,
+                  : _officeLocation,
+              zoom: 15.0,
             ),
-            markers: _markers,
+            markers: {
+              ..._markers,
+              Marker(
+                markerId: const MarkerId("officeLocation"),
+                position: _officeLocation,
+                infoWindow: InfoWindow(title: l10n.officeName, snippet: l10n.officeDesc),
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+              ),
+            },
+            circles: {
+              Circle(
+                circleId: const CircleId('officeGeofence'),
+                center: _officeLocation,
+                radius: AppConstants.attendanceRadius,
+                fillColor: AppColors.primary.withValues(alpha: 0.15),
+                strokeColor: AppColors.primary,
+                strokeWidth: 2,
+              ),
+            },
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             onMapCreated: (GoogleMapController controller) {
@@ -153,16 +186,16 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      "Alamat Anda Saat Ini:",
-                      style: TextStyle(
+                    Text(
+                      l10n.currentAddressLabel,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _currentAddress,
+                      _isLoadingAddress ? l10n.searchingLocation : _currentAddress,
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 14),
                     ),
@@ -170,7 +203,7 @@ class _GoogleMapsScreenState extends State<GoogleMapsScreen> {
                     ElevatedButton.icon(
                       onPressed: _openInGoogleMaps,
                       icon: const Icon(Icons.navigation),
-                      label: const Text("Buka di Google Maps"),
+                      label: Text(l10n.openInGoogleMaps),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,
                         foregroundColor: Colors.white,

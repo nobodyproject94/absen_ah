@@ -6,6 +6,8 @@ import '../components/absensi_card.dart';
 import '../components/custom_text_field.dart';
 import '../components/primary_button.dart';
 import '../utils/app_colors.dart';
+import '../utils/error_translator.dart';
+import '../l10n/app_localizations.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -32,15 +34,17 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  String? _requiredField(String? value, String fieldName) {
-    if (value == null || value.trim().isEmpty) return '$fieldName tidak boleh kosong';
+  String? _requiredField(BuildContext context, String? value, String fieldName) {
+    final l10n = AppLocalizations.of(context)!;
+    if (value == null || value.trim().isEmpty) return l10n.errFieldEmpty(fieldName);
     return null;
   }
 
-  String? _requiredEmail(String? value) {
+  String? _requiredEmail(BuildContext context, String? value) {
+    final l10n = AppLocalizations.of(context)!;
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Email tidak boleh kosong';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) return 'Format email tidak valid';
+    if (text.isEmpty) return l10n.errEmailEmpty;
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) return l10n.errEmailInvalid;
     return null;
   }
 
@@ -68,7 +72,7 @@ class _RegisterPageState extends State<RegisterPage> {
       if (authProvider.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(authProvider.error!),
+            content: Text(ErrorTranslator.translate(context, authProvider.error!)),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
           ),
@@ -81,10 +85,11 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final isLoading = authProvider.isLoading;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Registrasi', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(l10n.registerTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -93,13 +98,13 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Buat Akun Baru',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+              Text(
+                l10n.registerHeader,
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               Text(
-                'Daftar untuk mulai absensi hari ini.',
+                l10n.registerSubtitle,
                 style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 32),
@@ -110,44 +115,44 @@ class _RegisterPageState extends State<RegisterPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CustomTextField(
-                        label: 'Nama Lengkap',
+                        label: l10n.fullNameLabel,
                         icon: Icons.person_rounded,
                         controller: _nameController,
-                        validator: (val) => _requiredField(val, 'Nama'),
+                        validator: (val) => _requiredField(context, val, l10n.fullNameLabel),
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
-                        label: 'Email',
+                        label: l10n.emailLabel,
                         icon: Icons.email_rounded,
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        validator: _requiredEmail,
+                        validator: (v) => _requiredEmail(context, v),
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
-                        label: 'Password',
+                        label: l10n.passwordLabel,
                         icon: Icons.lock_rounded,
                         controller: _passwordController,
                         isPassword: true,
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => _register(),
                         validator: (val) {
-                          if (val == null || val.isEmpty) return 'Password tidak boleh kosong';
-                          if (val.length < 6) return 'Password minimal 6 karakter';
+                          if (val == null || val.isEmpty) return l10n.errPasswordEmpty;
+                          if (val.length < 6) return l10n.errPasswordMin;
                           return null;
                         },
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Jenis Kelamin',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      Text(
+                        l10n.genderLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(
                             child: RadioListTile<String>(
-                              title: const Text('Laki-laki', style: TextStyle(fontSize: 14)),
+                              title: Text(l10n.genderMale, style: const TextStyle(fontSize: 14)),
                               value: 'L',
                               groupValue: _jenisKelamin,
                               contentPadding: EdgeInsets.zero,
@@ -156,7 +161,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           Expanded(
                             child: RadioListTile<String>(
-                              title: const Text('Perempuan', style: TextStyle(fontSize: 14)),
+                              title: Text(l10n.genderFemale, style: const TextStyle(fontSize: 14)),
                               value: 'P',
                               groupValue: _jenisKelamin,
                               contentPadding: EdgeInsets.zero,
@@ -167,7 +172,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 28),
                       PrimaryButton(
-                        label: 'Daftar',
+                        label: l10n.registerButton,
                         icon: Icons.person_add_rounded,
                         loading: isLoading,
                         onPressed: _register,
@@ -181,9 +186,9 @@ class _RegisterPageState extends State<RegisterPage> {
                           style: TextButton.styleFrom(
                             foregroundColor: AppColors.primary,
                           ),
-                          child: const Text(
-                            'Sudah punya akun? Login di sini',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          child: Text(
+                            l10n.hasAccountLogin,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ),

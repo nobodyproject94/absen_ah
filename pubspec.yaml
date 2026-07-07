@@ -32,6 +32,8 @@ dependencies:
   dio: ^5.10.0
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_floating_bottom_bar: ^2.0.2
   flutter_launcher_icons: ^0.14.4
   flutter_secure_storage: ^10.3.1
@@ -39,8 +41,9 @@ dependencies:
   geolocator: ^14.0.3
   google_maps_flutter: ^2.17.1
   image_picker: ^1.2.3
-  intl: ^0.20.3
+  intl: ^0.20.2
   json_annotation: ^4.12.0
+  ntp: ^2.0.0
   provider: ^6.1.5+1
   retrofit: ^4.9.2
   shared_preferences: ^2.5.5
@@ -78,6 +81,7 @@ flutter_launcher_icons:
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

@@ -31,4 +31,13 @@ class LocationService {
       ),
     );
   }
+
+  static Stream<Position> getLivePositionStream() {
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 3, // Update tiap 3 meter
+      ),
+    );
+  }
 }

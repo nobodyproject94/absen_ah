@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:absen_ah/pages/login_page.dart';
 import 'package:absen_ah/pages/main_page.dart';
@@ -11,17 +12,26 @@ import 'package:absen_ah/providers/auth_provider.dart';
 import 'package:absen_ah/providers/attendance_provider.dart';
 import 'package:absen_ah/providers/language_provider.dart';
 import 'package:absen_ah/providers/notification_settings_provider.dart';
+import 'package:absen_ah/providers/time_provider.dart';
+import 'package:absen_ah/l10n/app_localizations.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final langProvider = LanguageProvider();
+  await langProvider.loadLanguage();
+  final notifProvider = NotificationSettingsProvider();
+  await notifProvider.loadSettings();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
-        ChangeNotifierProvider(create: (_) => LanguageProvider()..loadLanguage()),
-        ChangeNotifierProvider(create: (_) => NotificationSettingsProvider()..loadSettings()),
+        ChangeNotifierProvider(create: (_) => TimeProvider()),
+        ChangeNotifierProvider.value(value: langProvider),
+        ChangeNotifierProvider.value(value: notifProvider),
       ],
       child: const AbsensiApp(),
     ),
@@ -72,6 +82,7 @@ class _AbsensiAppState extends State<AbsensiApp> {
     return AnimatedBuilder(
       animation: _themeController,
       builder: (context, _) {
+        final langProvider = context.watch<LanguageProvider>();
         return MaterialApp(
           navigatorKey: navigatorKey,
           title: 'Absensi PPKD',
@@ -82,6 +93,14 @@ class _AbsensiAppState extends State<AbsensiApp> {
           ),
           darkTheme: ThemeData.dark(useMaterial3: true),
           themeMode: _themeController.themeMode,
+          locale: langProvider.locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
           initialRoute: '/',
           routes: {
             '/': (context) => !_initialized

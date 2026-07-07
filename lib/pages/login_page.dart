@@ -6,6 +6,8 @@ import '../components/absensi_card.dart';
 import '../components/custom_text_field.dart';
 import '../components/primary_button.dart';
 import '../utils/app_colors.dart';
+import '../utils/error_translator.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -26,19 +28,21 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  String? _requiredEmail(String? value) {
+  String? _requiredEmail(BuildContext context, String? value) {
+    final l10n = AppLocalizations.of(context)!;
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Email tidak boleh kosong';
+    if (text.isEmpty) return l10n.errEmailEmpty;
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) {
-      return 'Format email tidak valid';
+      return l10n.errEmailInvalid;
     }
     return null;
   }
 
-  String? _requiredPassword(String? value) {
+  String? _requiredPassword(BuildContext context, String? value) {
+    final l10n = AppLocalizations.of(context)!;
     final text = value ?? '';
-    if (text.isEmpty) return 'Password tidak boleh kosong';
-    if (text.length < 6) return 'Password minimal 6 karakter';
+    if (text.isEmpty) return l10n.errPasswordEmpty;
+    if (text.length < 6) return l10n.errPasswordMin;
     return null;
   }
 
@@ -59,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
       if (authProvider.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(authProvider.error!),
+            content: Text(ErrorTranslator.translate(context, authProvider.error!)),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
           ),
@@ -72,6 +76,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final isLoading = authProvider.isLoading;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: SafeArea(
@@ -91,9 +96,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 26),
-              const Text(
-                'ABSENSI AH..',
-                style: TextStyle(
+              Text(
+                l10n.appTitle,
+                style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
@@ -101,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Masuk untuk mencatat kehadiran secara real-time berbasis lokasi.',
+                l10n.loginSubtitle,
                 style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 32),
@@ -111,25 +116,25 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     children: [
                       CustomTextField(
-                        label: 'Email',
+                        label: l10n.emailLabel,
                         icon: Icons.email_rounded,
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        validator: _requiredEmail,
+                        validator: (v) => _requiredEmail(context, v),
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
-                        label: 'Password',
+                        label: l10n.passwordLabel,
                         icon: Icons.lock_rounded,
                         controller: _passwordController,
                         isPassword: true,
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => _login(),
-                        validator: _requiredPassword,
+                        validator: (v) => _requiredPassword(context, v),
                       ),
                       const SizedBox(height: 28),
                       PrimaryButton(
-                        label: 'Login',
+                        label: l10n.loginButton,
                         icon: Icons.login_rounded,
                         loading: isLoading,
                         onPressed: _login,
@@ -143,12 +148,11 @@ class _LoginPageState extends State<LoginPage> {
                                 '/register',
                               ),
                         style: TextButton.styleFrom(
-                        
                           foregroundColor: AppColors.primary,
                         ),
-                        child: const Text(
-                          'Belum punya akun? Register di sini',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        child: Text(
+                          l10n.noAccountRegister,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],

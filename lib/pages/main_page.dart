@@ -5,6 +5,7 @@ import 'package:absen_ah/pages/attendance_history_page.dart';
 import 'package:absen_ah/pages/profile_page.dart';
 import 'package:absen_ah/utils/app_colors.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:absen_ah/l10n/app_localizations.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -37,6 +38,7 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       extendBody: true,
       body: BottomBar(
@@ -79,9 +81,9 @@ class _MainPageState extends State<MainPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildBottomBarItem(0, Icons.home_rounded, 'Home'),
-              _buildBottomBarItem(1, Icons.history_rounded, 'Riwayat'),
-              _buildBottomBarItem(2, Icons.person_rounded, 'Profil'),
+              _buildBottomBarItem(0, Icons.home_rounded, l10n.navHome),
+              _buildBottomBarItem(1, Icons.history_rounded, l10n.navHistory),
+              _buildBottomBarItem(2, Icons.person_rounded, l10n.navProfile),
             ],
           ),
         ),

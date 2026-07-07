@@ -4,10 +4,13 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
 import '../components/absensi_card.dart';
+import '../components/live_clock_widget.dart';
 import '../components/primary_button.dart';
 import '../utils/app_colors.dart';
 import '../utils/helpers.dart';
 import '../utils/theme_controller.dart';
+import '../utils/error_translator.dart';
+import '../l10n/app_localizations.dart';
 import 'attendance_submit_map_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -30,14 +33,13 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
-
-
-  String _greeting() {
+  String _greeting(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hour = DateTime.now().hour;
-    if (hour < 11) return 'Selamat pagi';
-    if (hour < 15) return 'Selamat siang';
-    if (hour < 18) return 'Selamat sore';
-    return 'Selamat malam';
+    if (hour < 11) return l10n.greetingMorning;
+    if (hour < 15) return l10n.greetingAfternoon;
+    if (hour < 18) return l10n.greetingEvening;
+    return l10n.greetingNight;
   }
 
   @override
@@ -70,12 +72,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     padding: const EdgeInsets.all(18),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
+                        const LiveClockWidget(),
+                        const SizedBox(height: 18),
                         _buildTodayStatus(attendanceProvider),
                         const SizedBox(height: 18),
                         _buildActionButtons(attendanceProvider),
                         const SizedBox(height: 18),
                         _buildStats(attendanceProvider),
-
                         const SizedBox(height: 120),
                       ]),
                     ),
@@ -87,6 +90,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildSliverAppBar(String? userName) {
+    final l10n = AppLocalizations.of(context)!;
     return SliverToBoxAdapter(
       child: Container(
         padding: EdgeInsets.fromLTRB(
@@ -120,7 +124,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           : Icons.dark_mode_rounded,
                       color: Colors.white,
                     ),
-                    tooltip: isDark ? 'Mode Terang' : 'Mode Gelap',
+                    tooltip: isDark ? l10n.lightModeTooltip : l10n.darkModeTooltip,
                     onPressed: () =>
                         ThemeController.instance.toggleTheme(!isDark),
                   );
@@ -129,12 +133,12 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '${_greeting()},',
+              '${_greeting(context)},',
               style: const TextStyle(color: Colors.white70, fontSize: 16),
             ),
             const SizedBox(height: 6),
             Text(
-              userName ?? 'Peserta PPKD',
+              userName ?? l10n.defaultUser,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 26,
@@ -156,6 +160,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildError(String error) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -163,10 +168,10 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           const Icon(Icons.wifi_off_rounded, size: 54, color: AppColors.danger),
           const SizedBox(height: 16),
-          Text(error, textAlign: TextAlign.center),
+          Text(ErrorTranslator.translate(context, error), textAlign: TextAlign.center),
           const SizedBox(height: 16),
           PrimaryButton(
-            label: 'Coba Lagi',
+            label: l10n.tryAgainButton,
             icon: Icons.refresh_rounded,
             onPressed: () => context.read<AttendanceProvider>().fetchHistory(),
           ),
@@ -176,17 +181,56 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildTodayStatus(AttendanceProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
     final today = provider.todayRecord;
     final masuk = today?.checkInTime ?? '-';
     final pulang = today?.checkOutTime ?? '-';
+    final isLate = today?.isLate == true;
+    final isAnomaly = today?.timeAnomaly == true;
 
     return AbsensiCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Absensi Hari Ini',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l10n.todayAttendance,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              ),
+              if (today != null && today.hasCheckedIn)
+                Row(
+                  children: [
+                    if (isAnomaly) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(l10n.timeAnomalyBadge, style: const TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isLate ? AppColors.danger.withValues(alpha: 0.15) : AppColors.success.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isLate ? l10n.statusLate : l10n.statusOnTime,
+                        style: TextStyle(
+                          color: isLate ? AppColors.danger : AppColors.success,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(
@@ -194,7 +238,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Expanded(
                 child: _miniStatus(
                   Icons.login_rounded,
-                  'Masuk',
+                  l10n.checkInLabel,
                   masuk,
                   AppColors.success,
                 ),
@@ -203,7 +247,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Expanded(
                 child: _miniStatus(
                   Icons.logout_rounded,
-                  'Pulang',
+                  l10n.checkOutLabel,
                   pulang,
                   AppColors.warning,
                 ),
@@ -241,13 +285,14 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildActionButtons(AttendanceProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: PrimaryButton(
-                label: 'Masuk',
+                label: l10n.checkInLabel,
                 icon: Icons.my_location_rounded,
                 loading: provider.isCheckingIn,
                 backgroundColor: AppColors.success,
@@ -264,7 +309,7 @@ class _DashboardPageState extends State<DashboardPage> {
             const SizedBox(width: 12),
             Expanded(
               child: PrimaryButton(
-                label: 'Pulang',
+                label: l10n.checkOutLabel,
                 icon: Icons.pin_drop_rounded,
                 loading: provider.isCheckingOut,
                 backgroundColor: AppColors.warning,
@@ -284,7 +329,7 @@ class _DashboardPageState extends State<DashboardPage> {
         SizedBox(
           width: double.infinity,
           child: PrimaryButton(
-            label: 'Ajukan Izin / Sakit',
+            label: l10n.permitButton,
             icon: Icons.edit_document,
             onPressed: () {
               Navigator.pushNamed(context, '/izin');
@@ -296,26 +341,27 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildStats(AttendanceProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
     return AbsensiCard(
       child: Row(
         children: [
           Expanded(
             child: _statItem(
-              'Total',
+              l10n.statTotal,
               provider.totalAbsen.toString(),
               Icons.calendar_month_rounded,
             ),
           ),
           Expanded(
             child: _statItem(
-              'Masuk',
+              l10n.statPresent,
               provider.totalMasuk.toString(),
               Icons.verified_rounded,
             ),
           ),
           Expanded(
             child: _statItem(
-              'Izin',
+              l10n.statPermit,
               provider.totalIzin.toString(),
               Icons.pending_actions_rounded,
             ),
@@ -338,6 +384,4 @@ class _DashboardPageState extends State<DashboardPage> {
       ],
     );
   }
-
-
 }

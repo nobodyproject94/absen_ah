@@ -5,7 +5,7 @@ import '../services/api_service.dart';
 import '../services/dio_client.dart';
 import '../services/token_services.dart';
 import '../models/user_model.dart';
-import '../utils/helpers.dart';
+import '../utils/error_translator.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService(createDioClient());
@@ -172,14 +172,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String _parseDioError(DioException e) {
-    if (e.response == null) return 'Terjadi kesalahan jaringan.';
-    final status = e.response?.statusCode;
-    if (status == 401 || status == 404) return 'Sesi habis atau data tidak ditemukan.';
-    if (status == 422) {
-      final errors = e.response?.data['errors'];
-      return errors != null ? 'Data tidak valid: $errors' : 'Data tidak valid.';
-    }
-    if (status == 500) return 'Server sedang bermasalah (500).';
-    return extractApiMessage(e.response?.data, e.message ?? 'Terjadi kesalahan.');
+    return ErrorTranslator.getStandardMessage(e);
   }
 }

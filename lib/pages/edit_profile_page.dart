@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
+import '../utils/error_translator.dart';
+import '../l10n/app_localizations.dart';
 
 class EditProfilePage extends StatefulWidget {
   final UserModel user;
@@ -46,6 +48,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
     
     setState(() => _isLoading = true);
@@ -72,31 +75,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
       setState(() => _isLoading = false);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile berhasil diupdate!')),
+          SnackBar(content: Text(l10n.profileUpdateSuccess)),
         );
         Navigator.pop(context, true); // return true to refresh
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.error ?? 'Gagal update profile.')),
+          SnackBar(content: Text(provider.error != null ? ErrorTranslator.translate(context, provider.error!) : l10n.profileUpdateFailed)),
         );
       }
     }
   }
 
-  String? _validateEmail(String? val) {
-    if (val == null || val.trim().isEmpty) return 'Email tidak boleh kosong';
+  String? _validateEmail(BuildContext context, String? val) {
+    final l10n = AppLocalizations.of(context)!;
+    if (val == null || val.trim().isEmpty) return l10n.errEmailEmpty;
     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailRegex.hasMatch(val.trim())) return 'Format email tidak valid';
+    if (!emailRegex.hasMatch(val.trim())) return l10n.errEmailInvalid;
     return null;
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AuthProvider>();
+    final l10n = AppLocalizations.of(context)!;
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Profil'),
+        title: Text(l10n.editProfileTitle),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -106,16 +111,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nama Lengkap', border: OutlineInputBorder()),
-                validator: (val) => val == null || val.trim().isEmpty ? 'Wajib diisi' : null,
+                decoration: InputDecoration(labelText: l10n.fullNameLabel, border: const OutlineInputBorder()),
+                validator: (val) => val == null || val.trim().isEmpty ? l10n.requiredField : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
-                validator: _validateEmail,
-                // Email usually read-only or depends on backend rules
+                decoration: InputDecoration(labelText: l10n.emailLabel, border: const OutlineInputBorder()),
+                validator: (val) => _validateEmail(context, val),
               ),
               const SizedBox(height: 16),
               provider.trainings == null 
@@ -123,7 +127,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 : DropdownButtonFormField<int>(
                     isExpanded: true,
                     initialValue: provider.trainings!.any((t) => t.id == _selectedTrainingId) ? _selectedTrainingId : null,
-                    decoration: const InputDecoration(labelText: 'Jurusan (Pelatihan)', border: OutlineInputBorder()),
+                    decoration: InputDecoration(labelText: l10n.majorFieldLabel, border: const OutlineInputBorder()),
                     items: provider.trainings!.map((t) {
                       return DropdownMenuItem<int>(
                         value: t.id,
@@ -133,16 +137,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     onChanged: (val) => setState(() => _selectedTrainingId = val),
                   ),
               const SizedBox(height: 16),
-              const Text(
-                'Jenis Kelamin',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              Text(
+                l10n.genderLabel,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                     child: RadioListTile<String>(
-                      title: const Text('Laki-laki', style: TextStyle(fontSize: 14)),
+                      title: Text(l10n.genderMale, style: const TextStyle(fontSize: 14)),
                       value: 'L',
                       groupValue: _jenisKelamin,
                       contentPadding: EdgeInsets.zero,
@@ -151,7 +155,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   Expanded(
                     child: RadioListTile<String>(
-                      title: const Text('Perempuan', style: TextStyle(fontSize: 14)),
+                      title: Text(l10n.genderFemale, style: const TextStyle(fontSize: 14)),
                       value: 'P',
                       groupValue: _jenisKelamin,
                       contentPadding: EdgeInsets.zero,
@@ -164,7 +168,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               TextFormField(
                 controller: _batchIdController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Angkatan', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.batchFieldLabel, border: const OutlineInputBorder()),
               ),
               const SizedBox(height: 32),
               ElevatedButton(
@@ -174,7 +178,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
                 child: _isLoading 
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Simpan Perubahan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    : Text(l10n.saveChangesButton, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ],
           ),

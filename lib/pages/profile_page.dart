@@ -10,6 +10,8 @@ import '../providers/language_provider.dart';
 import '../providers/notification_settings_provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/theme_controller.dart';
+import '../utils/error_translator.dart';
+import '../l10n/app_localizations.dart';
 import 'change_password_page.dart';
 import 'edit_profile_page.dart';
 import 'login_page.dart';
@@ -33,8 +35,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _pickImage(BuildContext context) async {
     final authProvider = context.read<AuthProvider>();
+    final l10n = AppLocalizations.of(context)!;
 
-    // Bottom sheet for image source
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (BuildContext context) {
@@ -43,12 +45,12 @@ class _ProfilePageState extends State<ProfilePage> {
             children: <Widget>[
               ListTile(
                 leading: const Icon(Icons.photo_library),
-                title: const Text('Pilih dari Galeri'),
+                title: Text(l10n.pickFromGallery),
                 onTap: () => Navigator.of(context).pop(ImageSource.gallery),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_camera),
-                title: const Text('Ambil Foto (Kamera)'),
+                title: Text(l10n.takePhotoCamera),
                 onTap: () => Navigator.of(context).pop(ImageSource.camera),
               ),
             ],
@@ -75,13 +77,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Foto profil berhasil diubah.')),
+            SnackBar(content: Text(l10n.photoUpdateSuccess)),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                authProvider.error ?? 'Gagal mengubah foto profil.',
+                authProvider.error != null
+                    ? ErrorTranslator.translate(context, authProvider.error!)
+                    : l10n.photoUpdateFailed,
               ),
             ),
           );
@@ -91,21 +95,22 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _confirmSignOut(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Sign Out'),
-          content: const Text('Apakah Anda yakin ingin keluar dari sesi ini?'),
+          title: Text(l10n.signOutTitle),
+          content: Text(l10n.signOutConfirm),
           actions: <Widget>[
             TextButton(
-              child: const Text('Batal'),
+              child: Text(l10n.cancelButton),
               onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
-              child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+              child: Text(l10n.signOutButton, style: const TextStyle(color: Colors.red)),
               onPressed: () async {
-                Navigator.of(dialogContext).pop(); // close dialog
+                Navigator.of(dialogContext).pop();
                 await context.read<AuthProvider>().logout();
                 if (!context.mounted) return;
                 Navigator.pushAndRemoveUntil(
@@ -132,12 +137,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _getTrainingName(int? trainingId, AuthProvider provider) {
     if (trainingId == null) return '-';
-    if (provider.trainings == null) return 'Memuat...';
+    if (provider.trainings == null) return '...';
     final training = provider.trainings?.cast().firstWhere(
       (t) => t.id == trainingId,
       orElse: () => null,
     );
-    return training?.title ?? 'Unknown Training';
+    return training?.title ?? '-';
   }
 
   String _photoUrl(String value) {
@@ -156,7 +161,7 @@ class _ProfilePageState extends State<ProfilePage> {
             title,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          ?trailing,
+          if (trailing != null) trailing,
         ],
       ),
     );
@@ -198,6 +203,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
+    final l10n = AppLocalizations.of(context)!;
 
     if (authProvider.isLoading && user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -209,11 +215,11 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(authProvider.error!),
+              Text(ErrorTranslator.translate(context, authProvider.error!)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => context.read<AuthProvider>().fetchProfile(),
-                child: const Text('Coba Lagi'),
+                child: Text(l10n.tryAgainButton),
               ),
             ],
           ),
@@ -221,7 +227,6 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
 
-    // Wrap the entire Scaffold in AnimatedBuilder so it instantly reacts to theme changes
     return AnimatedBuilder(
       animation: ThemeController.instance,
       builder: (context, _) {
@@ -319,7 +324,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 // Personal Info
                 _buildSectionTitle(
-                  'Informasi Pribadi',
+                  l10n.personalInfoSection,
                   trailing: TextButton(
                     onPressed: () {
                       if (user != null) {
@@ -334,9 +339,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         });
                       }
                     },
-                    child: const Text(
-                      'EDIT',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    child: Text(
+                      l10n.editButton,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -344,47 +349,47 @@ class _ProfilePageState extends State<ProfilePage> {
                   isDark: isDark,
                   icon: Icons.person_outline,
                   iconBgColor: Colors.blue.withValues(alpha: 0.2),
-                  title: 'NAMA LENGKAP',
+                  title: l10n.fieldFullName,
                   subtitle: user?.name ?? '-',
                 ),
                 _buildListTile(
                   isDark: isDark,
                   icon: Icons.email_outlined,
                   iconBgColor: Colors.purple.withValues(alpha: 0.2),
-                  title: 'EMAIL',
+                  title: l10n.fieldEmail,
                   subtitle: user?.email ?? '-',
                 ),
                 _buildListTile(
                   isDark: isDark,
                   icon: Icons.wc_outlined,
                   iconBgColor: Colors.teal.withValues(alpha: 0.2),
-                  title: 'JENIS KELAMIN',
+                  title: l10n.fieldGender,
                   subtitle: user?.jenisKelamin == 'L'
-                      ? 'Laki-laki'
-                      : (user?.jenisKelamin == 'P' ? 'Perempuan' : '-'),
+                      ? l10n.genderMale
+                      : (user?.jenisKelamin == 'P' ? l10n.genderFemale : '-'),
                 ),
                 _buildListTile(
                   isDark: isDark,
                   icon: Icons.school_outlined,
                   iconBgColor: Colors.blue.withValues(alpha: 0.2),
-                  title: 'JURUSAN',
+                  title: l10n.fieldMajor,
                   subtitle: _getTrainingName(user?.trainingId, authProvider),
                 ),
                 _buildListTile(
                   isDark: isDark,
                   icon: Icons.groups_outlined,
                   iconBgColor: Colors.blue.withValues(alpha: 0.2),
-                  title: 'ANGKATAN',
+                  title: l10n.fieldBatch,
                   subtitle: user?.batchId != null ? '${user!.batchId}' : '-',
                 ),
 
                 // Security
-                _buildSectionTitle('Keamanan'),
+                _buildSectionTitle(l10n.securitySection),
                 _buildListTile(
                   isDark: isDark,
                   icon: Icons.lock_outline,
                   iconBgColor: Colors.blue.withValues(alpha: 0.2),
-                  title: 'Ubah Password',
+                  title: l10n.changePasswordMenu,
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(
@@ -401,10 +406,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       isDark: isDark,
                       icon: Icons.notifications_outlined,
                       iconBgColor: Colors.green.withValues(alpha: 0.2),
-                      title: 'Notifikasi',
+                      title: l10n.notificationMenu,
                       subtitle: notifProvider.isNotifEnabled
-                          ? 'Aktif'
-                          : 'Nonaktif',
+                          ? l10n.notifActive
+                          : l10n.notifInactive,
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         notifProvider.toggleNotification(
@@ -416,14 +421,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 // Language
-                _buildSectionTitle('Bahasa'),
+                _buildSectionTitle(l10n.languageSection),
                 Consumer<LanguageProvider>(
                   builder: (context, langProvider, _) {
                     return _buildListTile(
                       isDark: isDark,
                       icon: Icons.language,
                       iconBgColor: Colors.orange.withValues(alpha: 0.2),
-                      title: 'Bahasa',
+                      title: l10n.languageSection,
                       trailing: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: langProvider.language,
@@ -447,7 +452,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 // Appearance
-                _buildSectionTitle('Tampilan'),
+                _buildSectionTitle(l10n.appearanceSection),
                 Container(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -458,12 +463,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: ListTile(
-                    title: const Text(
-                      'Mode Gelap',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    title: Text(
+                      l10n.darkModeMenu,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: const Text(
-                      'Gunakan tema gelap agar lebih nyaman di mata',
+                    subtitle: Text(
+                      l10n.darkModeDesc,
                     ),
                     trailing: IconButton(
                       icon: Icon(
@@ -483,7 +488,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   isDark: isDark,
                   icon: Icons.info_outline,
                   iconBgColor: Colors.blue.withValues(alpha: 0.2),
-                  title: 'Tentang Aplikasi',
+                  title: l10n.aboutAppMenu,
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showAboutDialog(context),
                 ),
@@ -492,13 +497,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 16),
                 _buildListTile(
                   isDark: isDark,
-                  icon: Icons.logout, 
+                  icon: Icons.logout,
                   iconBgColor: Colors.red.withValues(alpha: 0.8),
-                  title: 'Keluar',
+                  title: l10n.signOutButton,
                   titleColor: Colors.red,
                   onTap: () => _confirmSignOut(context),
                 ),
-                const SizedBox(height: 100), // Space for floating bottom bar
+                const SizedBox(height: 100),
               ],
             ),
           ),

@@ -6,6 +6,8 @@ import '../providers/attendance_provider.dart';
 import '../services/dio_client.dart';
 import '../utils/app_colors.dart';
 import '../utils/helpers.dart';
+import '../utils/error_translator.dart';
+import '../l10n/app_localizations.dart';
 import '../components/absensi_card.dart';
 import '../components/primary_button.dart';
 import 'attendance_detail_map_page.dart';
@@ -51,9 +53,10 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Future<void> _deleteAttendance(AttendanceRecord record) async {
+    final l10n = AppLocalizations.of(context)!;
     if (record.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ID absen tidak ditemukan.')),
+        SnackBar(content: Text(l10n.errIdNotFound)),
       );
       return;
     }
@@ -61,14 +64,14 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     final approved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Absen?'),
-        content: const Text('Data absensi ini akan dihapus dari server. Lanjutkan?'),
+        title: Text(l10n.deleteDialogTitle),
+        content: Text(l10n.deleteDialogContent),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancelButton)),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text('Hapus'),
+            child: Text(l10n.deleteButton),
           ),
         ],
       ),
@@ -81,7 +84,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(extractApiMessage(response.data, 'Data absen berhasil dihapus.')),
+          content: Text(extractApiMessage(response.data, l10n.deleteSuccess)),
           backgroundColor: AppColors.success,
         ),
       );
@@ -90,7 +93,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(extractApiMessage(e.response?.data, 'Gagal menghapus data absen.')),
+          content: Text(extractApiMessage(e.response?.data, l10n.errDeleteFailed)),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -98,7 +101,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal menghapus data absen: $e'),
+          content: Text(ErrorTranslator.translate(context, e)),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -106,11 +109,12 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   void _openMap(AttendanceRecord record) {
+    final l10n = AppLocalizations.of(context)!;
     final lat = record.displayLatitude;
     final lng = record.displayLongitude;
     if (lat == null || lng == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Koordinat lokasi tidak tersedia.')),
+        SnackBar(content: Text(l10n.errCoordsNotAvailable)),
       );
       return;
     }
@@ -121,6 +125,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
           latitude: lat,
           longitude: lng,
           title: 'Lokasi ${record.date ?? 'Absensi'}',
+          record: record,
         ),
       ),
     );
@@ -129,14 +134,15 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
+    final l10n = AppLocalizations.of(context)!;
     
     return RefreshIndicator(
       onRefresh: _fetchHistory,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          const SliverAppBar(
-            title: Text('Riwayat Absensi'),
+          SliverAppBar(
+            title: Text(l10n.historyTitle),
             pinned: true,
           ),
           if (_error != null)
@@ -151,6 +157,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Widget _errorView() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -159,9 +166,9 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
           children: [
             const Icon(Icons.error_outline_rounded, size: 54, color: AppColors.danger),
             const SizedBox(height: 16),
-            Text(_error!, textAlign: TextAlign.center),
+            Text(ErrorTranslator.translate(context, _error!), textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            PrimaryButton(label: 'Coba Lagi', icon: Icons.refresh_rounded, onPressed: _fetchHistory),
+            PrimaryButton(label: l10n.tryAgainButton, icon: Icons.refresh_rounded, onPressed: _fetchHistory),
           ],
         ),
       ),
@@ -169,17 +176,19 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Widget _emptyView() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: const [
-        Icon(Icons.event_busy_rounded, size: 64, color: Colors.grey),
-        SizedBox(height: 16),
-        Text('Belum ada riwayat absensi.', textAlign: TextAlign.center),
+      children: [
+        const Icon(Icons.event_busy_rounded, size: 64, color: Colors.grey),
+        const SizedBox(height: 16),
+        Text(l10n.emptyHistory, textAlign: TextAlign.center),
       ],
     );
   }
 
   Widget _sliverListView() {
+    final l10n = AppLocalizations.of(context)!;
     return SliverPadding(
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
@@ -198,7 +207,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            record.date ?? 'Tanggal tidak tersedia',
+                            record.date ?? l10n.dateNotAvailable,
                             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                           ),
                         ),
@@ -208,9 +217,9 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                             if (value == 'map') _openMap(record);
                             if (value == 'delete') _deleteAttendance(record);
                           },
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(value: 'map', child: Text('Lihat Map')),
-                            PopupMenuItem(value: 'delete', child: Text('Hapus Absen')),
+                          itemBuilder: (context) => [
+                            PopupMenuItem(value: 'map', child: Text(l10n.viewMapMenu)),
+                            PopupMenuItem(value: 'delete', child: Text(l10n.deleteAttendanceMenu)),
                           ],
                         ),
                       ],
@@ -227,7 +236,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Alasan Izin:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            Text(l10n.permitReasonLabel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                             const SizedBox(height: 4),
                             Text(record.alasanIzin ?? '-', style: const TextStyle(fontSize: 14)),
                           ],
@@ -236,9 +245,9 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                     ] else ...[
                       Row(
                         children: [
-                          Expanded(child: _timeBox('Masuk', record.checkInTime ?? '-', Icons.login_rounded)),
+                          Expanded(child: _timeBox(l10n.checkInLabel, record.checkInTime ?? '-', Icons.login_rounded)),
                           const SizedBox(width: 10),
-                          Expanded(child: _timeBox('Pulang', record.checkOutTime ?? '-', Icons.logout_rounded)),
+                          Expanded(child: _timeBox(l10n.checkOutLabel, record.checkOutTime ?? '-', Icons.logout_rounded)),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -267,21 +276,43 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Widget _statusChip(AttendanceRecord record) {
+    final l10n = AppLocalizations.of(context)!;
     final isIzin = record.isIzin;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: isIzin ? AppColors.warning.withValues(alpha: 0.15) : AppColors.success.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        isIzin ? 'Izin' : 'Masuk',
-        style: TextStyle(
-          color: isIzin ? AppColors.warning : AppColors.success,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
+    final isLate = record.isLate == true;
+    final isAnomaly = record.timeAnomaly == true;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isAnomaly) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(l10n.timeAnomalyBadge, style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 11)),
+          ),
+          const SizedBox(width: 4),
+        ],
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: isIzin
+                ? AppColors.warning.withValues(alpha: 0.15)
+                : (isLate ? AppColors.danger.withValues(alpha: 0.15) : AppColors.success.withValues(alpha: 0.15)),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            isIzin ? l10n.statPermit : (isLate ? l10n.statusLate.replaceAll('• ', '') : l10n.statPresent),
+            style: TextStyle(
+              color: isIzin ? AppColors.warning : (isLate ? AppColors.danger : AppColors.success),
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -310,4 +341,3 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     );
   }
 }
-
