@@ -108,6 +108,52 @@ class AttendanceRecord {
     );
   }
 
+  AttendanceRecord copyWith({
+    int? id,
+    String? date,
+    String? checkInTime,
+    String? checkOutTime,
+    double? checkInLatitude,
+    double? checkInLongitude,
+    double? checkOutLatitude,
+    double? checkOutLongitude,
+    String? checkInAddress,
+    String? checkOutAddress,
+    String? status,
+    String? alasanIzin,
+    DateTime? serverTimestamp,
+    DateTime? deviceTimestamp,
+    int? clientOffsetMs,
+    bool? timeAnomaly,
+    double? accuracyMeters,
+    double? distanceToOfficeM,
+    bool? isLate,
+    Map<String, dynamic>? raw,
+  }) {
+    return AttendanceRecord(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      checkInTime: checkInTime ?? this.checkInTime,
+      checkOutTime: checkOutTime ?? this.checkOutTime,
+      checkInLatitude: checkInLatitude ?? this.checkInLatitude,
+      checkInLongitude: checkInLongitude ?? this.checkInLongitude,
+      checkOutLatitude: checkOutLatitude ?? this.checkOutLatitude,
+      checkOutLongitude: checkOutLongitude ?? this.checkOutLongitude,
+      checkInAddress: checkInAddress ?? this.checkInAddress,
+      checkOutAddress: checkOutAddress ?? this.checkOutAddress,
+      status: status ?? this.status,
+      alasanIzin: alasanIzin ?? this.alasanIzin,
+      serverTimestamp: serverTimestamp ?? this.serverTimestamp,
+      deviceTimestamp: deviceTimestamp ?? this.deviceTimestamp,
+      clientOffsetMs: clientOffsetMs ?? this.clientOffsetMs,
+      timeAnomaly: timeAnomaly ?? this.timeAnomaly,
+      accuracyMeters: accuracyMeters ?? this.accuracyMeters,
+      distanceToOfficeM: distanceToOfficeM ?? this.distanceToOfficeM,
+      isLate: isLate ?? this.isLate,
+      raw: raw ?? this.raw,
+    );
+  }
+
   bool get hasCheckedIn => checkInTime != null && checkInTime!.isNotEmpty;
   bool get hasCheckedOut => checkOutTime != null && checkOutTime!.isNotEmpty;
   bool get isIzin => status == 'izin';

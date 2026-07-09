@@ -78,6 +78,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         const SizedBox(height: 18),
                         _buildActionButtons(attendanceProvider),
                         const SizedBox(height: 18),
+                        _buildAttendanceRateCard(attendanceProvider),
+                        const SizedBox(height: 18),
                         _buildStats(attendanceProvider),
                         const SizedBox(height: 120),
                       ]),
@@ -382,6 +384,69 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
+    );
+  }
+
+  Widget _buildAttendanceRateCard(AttendanceProvider provider) {
+    final present = provider.totalMasuk;
+    final total = provider.totalAbsen;
+    final rate = total == 0 ? 0.0 : (present / total);
+    final percentStr = (rate * 100).toStringAsFixed(0);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AbsensiCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 70,
+                  height: 70,
+                  child: CircularProgressIndicator(
+                    value: rate,
+                    strokeWidth: 8,
+                    backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                ),
+                Text(
+                  '$percentStr%',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Persentase Kehadiran',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Anda telah hadir $present hari dari total $total hari kerja aktif.',
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : Colors.black54,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

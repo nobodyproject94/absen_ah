@@ -4,6 +4,7 @@ import '../models/attendance_record.dart';
 import '../components/geofence_map_marker.dart';
 import '../utils/app_colors.dart';
 import '../l10n/app_localizations.dart';
+import 'edit_attendance_page.dart';
 
 class AttendanceDetailMapPage extends StatefulWidget {
   final double? latitude;
@@ -25,11 +26,18 @@ class AttendanceDetailMapPage extends StatefulWidget {
 
 class _AttendanceDetailMapPageState extends State<AttendanceDetailMapPage> {
   GoogleMapController? _mapController;
+  late AttendanceRecord? _localRecord;
+
+  @override
+  void initState() {
+    super.initState();
+    _localRecord = widget.record;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final record = widget.record;
+    final record = _localRecord;
     final checkInLat = record?.checkInLatitude ?? widget.latitude;
     final checkInLng = record?.checkInLongitude ?? widget.longitude;
     final checkOutLat = record?.checkOutLatitude;
@@ -95,7 +103,28 @@ class _AttendanceDetailMapPageState extends State<AttendanceDetailMapPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          if (_localRecord != null)
+            IconButton(
+              icon: const Icon(Icons.edit_rounded),
+              onPressed: () async {
+                final updated = await Navigator.push<AttendanceRecord>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditAttendancePage(record: _localRecord!),
+                  ),
+                );
+                if (updated != null && mounted) {
+                  setState(() {
+                    _localRecord = updated;
+                  });
+                }
+              },
+            ),
+        ],
+      ),
       body: Stack(
         children: [
           GoogleMap(

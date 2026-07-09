@@ -23,12 +23,15 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   bool _loading = true;
   String? _error;
   List<AttendanceRecord> _records = [];
+  DateTimeRange? _selectedDateRange;
 
   @override
   void initState() {
     super.initState();
     _fetchHistory();
   }
+
+  String _dd(int value) => value.toString().padLeft(2, '0');
 
   Future<void> _fetchHistory() async {
     setState(() {
@@ -37,7 +40,13 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     });
 
     try {
-      final response = await createDioClient().get('/api/absen/history');
+      final queryParams = <String, dynamic>{};
+      if (_selectedDateRange != null) {
+        queryParams['start'] = '${_selectedDateRange!.start.year}-${_dd(_selectedDateRange!.start.month)}-${_dd(_selectedDateRange!.start.day)}';
+        queryParams['end'] = '${_selectedDateRange!.end.year}-${_dd(_selectedDateRange!.end.month)}-${_dd(_selectedDateRange!.end.day)}';
+      }
+
+      final response = await createDioClient().get('/api/absen/history', queryParameters: queryParams);
       if (!mounted) return;
       setState(() {
         _records = AttendanceProvider.parseAttendanceList(response.data);
@@ -50,6 +59,36 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _selectDateRange() async {
+    final initialRange = _selectedDateRange ?? DateTimeRange(
+      start: DateTime.now().subtract(const Duration(days: 7)),
+      end: DateTime.now(),
+    );
+
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: initialRange,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      confirmText: 'PILIH',
+      saveText: 'SIMPAN',
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDateRange = picked;
+      });
+      _fetchHistory();
+    }
+  }
+
+  void _clearFilter() {
+    setState(() {
+      _selectedDateRange = null;
+    });
+    _fetchHistory();
   }
 
   Future<void> _deleteAttendance(AttendanceRecord record) async {
@@ -108,7 +147,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     }
   }
 
-  void _openMap(AttendanceRecord record) {
+  void _openMap(AttendanceRecord record) async {
     final l10n = AppLocalizations.of(context)!;
     final lat = record.displayLatitude;
     final lng = record.displayLongitude;
@@ -118,7 +157,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
       );
       return;
     }
-    Navigator.push(
+    final updated = await Navigator.push<AttendanceRecord>(
       context,
       MaterialPageRoute(
         builder: (_) => AttendanceDetailMapPage(
@@ -129,6 +168,14 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         ),
       ),
     );
+    if (updated != null && mounted) {
+      final index = _records.indexWhere((r) => r.id == updated.id);
+      if (index != -1) {
+        setState(() {
+          _records[index] = updated;
+        });
+      }
+    }
   }
 
   @override
@@ -144,7 +191,45 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
           SliverAppBar(
             title: Text(l10n.historyTitle),
             pinned: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.date_range_rounded),
+                onPressed: _selectDateRange,
+              ),
+            ],
           ),
+          if (_selectedDateRange != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Card(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.filter_alt_rounded, color: AppColors.primary, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Filter: ${readableDate(_selectedDateRange!.start)} - ${readableDate(_selectedDateRange!.end)}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
+                            ),
+                          ],
+                        ),
+                        GestureDetector(
+                          onTap: _clearFilter,
+                          child: const Icon(Icons.cancel_rounded, color: AppColors.primary, size: 20),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (_error != null)
             SliverFillRemaining(child: _errorView())
           else if (_records.isEmpty)

@@ -257,6 +257,31 @@ class AttendanceProvider extends ChangeNotifier {
     }
   }
 
+  /// Update attendance record locally (Demo/LSP Presentation Mode)
+  void updateRecordLocally(AttendanceRecord updated) {
+    final index = _records.indexWhere((r) => r.id == updated.id);
+    if (index != -1) {
+      _records[index] = updated;
+    } else {
+      _records.add(updated);
+    }
+
+    if (_todayRecord?.id == updated.id) {
+      _todayRecord = updated;
+    }
+
+    // Recalculate stats locally
+    _totalAbsen = _records.length;
+    _totalMasuk = _records.where((r) => r.status == 'masuk').length;
+    _totalIzin = _records.where((r) => r.status == 'izin').length;
+    
+    final now = DateTime.now();
+    final todayKey = '${now.year}-${_dd(now.month)}-${_dd(now.day)}';
+    _sudahAbsenHariIni = _records.any((r) => r.date == todayKey);
+
+    notifyListeners();
+  }
+
   /// Fetch history with date range filter
   Future<List<AttendanceRecord>> fetchHistoryByRange(String start, String end) async {
     try {
