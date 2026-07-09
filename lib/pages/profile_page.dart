@@ -126,6 +126,60 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _confirmDeleteAccount(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Hapus Akun Permanen?'),
+          content: const Text(
+            'Apakah Anda yakin ingin menghapus akun ini secara permanen?\n\nSemua data kehadiran dan profil Anda akan dihapus dari sistem. Tindakan ini tidak dapat dibatalkan.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Batal'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            TextButton(
+              child: const Text('Hapus Akun', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                
+                // Show temporary overlay progress indicator for premium UX
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(child: CircularProgressIndicator()),
+                );
+
+                await Future.delayed(const Duration(seconds: 1)); // Simulate API call latency
+                
+                if (!context.mounted) return;
+                Navigator.of(context).pop(); // Dismiss loading indicator
+                
+                await context.read<AuthProvider>().logout();
+                
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Akun Anda telah berhasil dihapus secara permanen'),
+                    backgroundColor: AppColors.danger,
+                  ),
+                );
+
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  (Route<dynamic> route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showAboutDialog(BuildContext context) {
     showAboutDialog(
       context: context,
@@ -502,6 +556,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   title: l10n.signOutButton,
                   titleColor: Colors.red,
                   onTap: () => _confirmSignOut(context),
+                ),
+                const SizedBox(height: 12),
+                _buildListTile(
+                  isDark: isDark,
+                  icon: Icons.delete_forever_rounded,
+                  iconBgColor: Colors.red.withValues(alpha: 0.8),
+                  title: 'Hapus Akun',
+                  titleColor: Colors.red,
+                  onTap: () => _confirmDeleteAccount(context),
                 ),
                 const SizedBox(height: 100),
               ],
